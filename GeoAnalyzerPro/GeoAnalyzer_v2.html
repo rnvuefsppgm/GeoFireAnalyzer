@@ -1,0 +1,3802 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoAnalyzer Pro v2 — Análise espacial</title>
+<!-- Leaflet 1.9.4 CSS (inlined: the map no longer depends on an external stylesheet) -->
+<style>
+/* required styles */
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	}
+.leaflet-container {
+	overflow: hidden;
+	}
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	-webkit-user-select: none;
+	   -moz-user-select: none;
+	        user-select: none;
+	  -webkit-user-drag: none;
+	}
+/* Prevents IE11 from highlighting tiles in blue */
+.leaflet-tile::selection {
+	background: transparent;
+}
+/* Safari renders non-retina tile on retina better with this, but Chrome is worse */
+.leaflet-safari .leaflet-tile {
+	image-rendering: -webkit-optimize-contrast;
+	}
+/* hack that prevents hw layers "stretching" when loading new tiles */
+.leaflet-safari .leaflet-tile-container {
+	width: 1600px;
+	height: 1600px;
+	-webkit-transform-origin: 0 0;
+	}
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+	display: block;
+	}
+/* .leaflet-container svg: reset svg max-width decleration shipped in Joomla! (joomla.org) 3.x */
+/* .leaflet-container img: map is broken in FF if you have max-width: 100% on tiles */
+.leaflet-container .leaflet-overlay-pane svg {
+	max-width: none !important;
+	max-height: none !important;
+	}
+.leaflet-container .leaflet-marker-pane img,
+.leaflet-container .leaflet-shadow-pane img,
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-image-layer,
+.leaflet-container .leaflet-tile {
+	max-width: none !important;
+	max-height: none !important;
+	width: auto;
+	padding: 0;
+	}
+
+.leaflet-container img.leaflet-tile {
+	/* See: https://bugs.chromium.org/p/chromium/issues/detail?id=600120 */
+	mix-blend-mode: plus-lighter;
+}
+
+.leaflet-container.leaflet-touch-zoom {
+	-ms-touch-action: pan-x pan-y;
+	touch-action: pan-x pan-y;
+	}
+.leaflet-container.leaflet-touch-drag {
+	-ms-touch-action: pinch-zoom;
+	/* Fallback for FF which doesn't support pinch-zoom */
+	touch-action: none;
+	touch-action: pinch-zoom;
+}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom {
+	-ms-touch-action: none;
+	touch-action: none;
+}
+.leaflet-container {
+	-webkit-tap-highlight-color: transparent;
+}
+.leaflet-container a {
+	-webkit-tap-highlight-color: rgba(51, 181, 229, 0.4);
+}
+.leaflet-tile {
+	filter: inherit;
+	visibility: hidden;
+	}
+.leaflet-tile-loaded {
+	visibility: inherit;
+	}
+.leaflet-zoom-box {
+	width: 0;
+	height: 0;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	z-index: 800;
+	}
+/* workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=888319 */
+.leaflet-overlay-pane svg {
+	-moz-user-select: none;
+	}
+
+.leaflet-pane         { z-index: 400; }
+
+.leaflet-tile-pane    { z-index: 200; }
+.leaflet-overlay-pane { z-index: 400; }
+.leaflet-shadow-pane  { z-index: 500; }
+.leaflet-marker-pane  { z-index: 600; }
+.leaflet-tooltip-pane   { z-index: 650; }
+.leaflet-popup-pane   { z-index: 700; }
+
+.leaflet-map-pane canvas { z-index: 100; }
+.leaflet-map-pane svg    { z-index: 200; }
+
+.leaflet-vml-shape {
+	width: 1px;
+	height: 1px;
+	}
+.lvml {
+	display: inline-block;
+	position: absolute;
+	}
+
+
+/* control positioning */
+
+.leaflet-control {
+	position: relative;
+	z-index: 800;
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+.leaflet-top,
+.leaflet-bottom {
+	position: absolute;
+	z-index: 1000;
+	pointer-events: none;
+	}
+.leaflet-top {
+	top: 0;
+	}
+.leaflet-right {
+	right: 0;
+	}
+.leaflet-bottom {
+	bottom: 0;
+	}
+.leaflet-left {
+	left: 0;
+	}
+.leaflet-control {
+	float: left;
+	clear: both;
+	}
+.leaflet-right .leaflet-control {
+	float: right;
+	}
+.leaflet-top .leaflet-control {
+	margin-top: 10px;
+	}
+.leaflet-bottom .leaflet-control {
+	margin-bottom: 10px;
+	}
+.leaflet-left .leaflet-control {
+	margin-left: 10px;
+	}
+.leaflet-right .leaflet-control {
+	margin-right: 10px;
+	}
+
+
+/* zoom and fade animations */
+
+.leaflet-fade-anim .leaflet-popup {
+	opacity: 0;
+	-webkit-transition: opacity 0.2s linear;
+	   -moz-transition: opacity 0.2s linear;
+	        transition: opacity 0.2s linear;
+	}
+.leaflet-fade-anim .leaflet-map-pane .leaflet-popup {
+	opacity: 1;
+	}
+.leaflet-zoom-animated {
+	-webkit-transform-origin: 0 0;
+	    -ms-transform-origin: 0 0;
+	        transform-origin: 0 0;
+	}
+svg.leaflet-zoom-animated {
+	will-change: transform;
+}
+
+.leaflet-zoom-anim .leaflet-zoom-animated {
+	-webkit-transition: -webkit-transform 0.25s cubic-bezier(0,0,0.25,1);
+	   -moz-transition:    -moz-transform 0.25s cubic-bezier(0,0,0.25,1);
+	        transition:         transform 0.25s cubic-bezier(0,0,0.25,1);
+	}
+.leaflet-zoom-anim .leaflet-tile,
+.leaflet-pan-anim .leaflet-tile {
+	-webkit-transition: none;
+	   -moz-transition: none;
+	        transition: none;
+	}
+
+.leaflet-zoom-anim .leaflet-zoom-hide {
+	visibility: hidden;
+	}
+
+
+/* cursors */
+
+.leaflet-interactive {
+	cursor: pointer;
+	}
+.leaflet-grab {
+	cursor: -webkit-grab;
+	cursor:    -moz-grab;
+	cursor:         grab;
+	}
+.leaflet-crosshair,
+.leaflet-crosshair .leaflet-interactive {
+	cursor: crosshair;
+	}
+.leaflet-popup-pane,
+.leaflet-control {
+	cursor: auto;
+	}
+.leaflet-dragging .leaflet-grab,
+.leaflet-dragging .leaflet-grab .leaflet-interactive,
+.leaflet-dragging .leaflet-marker-draggable {
+	cursor: move;
+	cursor: -webkit-grabbing;
+	cursor:    -moz-grabbing;
+	cursor:         grabbing;
+	}
+
+/* marker & overlays interactivity */
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-image-layer,
+.leaflet-pane > svg path,
+.leaflet-tile-container {
+	pointer-events: none;
+	}
+
+.leaflet-marker-icon.leaflet-interactive,
+.leaflet-image-layer.leaflet-interactive,
+.leaflet-pane > svg path.leaflet-interactive,
+svg.leaflet-image-layer.leaflet-interactive path {
+	pointer-events: visiblePainted; /* IE 9-10 doesn't have auto */
+	pointer-events: auto;
+	}
+
+/* visual tweaks */
+
+.leaflet-container {
+	background: #ddd;
+	outline-offset: 1px;
+	}
+.leaflet-container a {
+	color: #0078A8;
+	}
+.leaflet-zoom-box {
+	border: 2px dotted #38f;
+	background: rgba(255,255,255,0.5);
+	}
+
+
+/* general typography */
+.leaflet-container {
+	font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-size: 0.75rem;
+	line-height: 1.5;
+	}
+
+
+/* general toolbar styles */
+
+.leaflet-bar {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
+	border-radius: 4px;
+	}
+.leaflet-bar a {
+	background-color: #fff;
+	border-bottom: 1px solid #ccc;
+	width: 26px;
+	height: 26px;
+	line-height: 26px;
+	display: block;
+	text-align: center;
+	text-decoration: none;
+	color: black;
+	}
+.leaflet-bar a,
+.leaflet-control-layers-toggle {
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+	display: block;
+	}
+.leaflet-bar a:hover,
+.leaflet-bar a:focus {
+	background-color: #f4f4f4;
+	}
+.leaflet-bar a:first-child {
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+	}
+.leaflet-bar a:last-child {
+	border-bottom-left-radius: 4px;
+	border-bottom-right-radius: 4px;
+	border-bottom: none;
+	}
+.leaflet-bar a.leaflet-disabled {
+	cursor: default;
+	background-color: #f4f4f4;
+	color: #bbb;
+	}
+
+.leaflet-touch .leaflet-bar a {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	}
+.leaflet-touch .leaflet-bar a:first-child {
+	border-top-left-radius: 2px;
+	border-top-right-radius: 2px;
+	}
+.leaflet-touch .leaflet-bar a:last-child {
+	border-bottom-left-radius: 2px;
+	border-bottom-right-radius: 2px;
+	}
+
+/* zoom control */
+
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+	font: bold 18px 'Lucida Console', Monaco, monospace;
+	text-indent: 1px;
+	}
+
+.leaflet-touch .leaflet-control-zoom-in, .leaflet-touch .leaflet-control-zoom-out  {
+	font-size: 22px;
+	}
+
+
+/* layers control */
+
+.leaflet-control-layers {
+	box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+	background: #fff;
+	border-radius: 5px;
+	}
+.leaflet-control-layers-toggle {
+	background-image: url(images/layers.png);
+	width: 36px;
+	height: 36px;
+	}
+.leaflet-retina .leaflet-control-layers-toggle {
+	background-image: url(images/layers-2x.png);
+	background-size: 26px 26px;
+	}
+.leaflet-touch .leaflet-control-layers-toggle {
+	width: 44px;
+	height: 44px;
+	}
+.leaflet-control-layers .leaflet-control-layers-list,
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle {
+	display: none;
+	}
+.leaflet-control-layers-expanded .leaflet-control-layers-list {
+	display: block;
+	position: relative;
+	}
+.leaflet-control-layers-expanded {
+	padding: 6px 10px 6px 6px;
+	color: #333;
+	background: #fff;
+	}
+.leaflet-control-layers-scrollbar {
+	overflow-y: scroll;
+	overflow-x: hidden;
+	padding-right: 5px;
+	}
+.leaflet-control-layers-selector {
+	margin-top: 2px;
+	position: relative;
+	top: 1px;
+	}
+.leaflet-control-layers label {
+	display: block;
+	font-size: 13px;
+	font-size: 1.08333em;
+	}
+.leaflet-control-layers-separator {
+	height: 0;
+	border-top: 1px solid #ddd;
+	margin: 5px -10px 5px -6px;
+	}
+
+/* Default icon URLs */
+.leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
+	background-image: url(images/marker-icon.png);
+	}
+
+
+/* attribution and scale controls */
+
+.leaflet-container .leaflet-control-attribution {
+	background: #fff;
+	background: rgba(255, 255, 255, 0.8);
+	margin: 0;
+	}
+.leaflet-control-attribution,
+.leaflet-control-scale-line {
+	padding: 0 5px;
+	color: #333;
+	line-height: 1.4;
+	}
+.leaflet-control-attribution a {
+	text-decoration: none;
+	}
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+	text-decoration: underline;
+	}
+.leaflet-attribution-flag {
+	display: inline !important;
+	vertical-align: baseline !important;
+	width: 1em;
+	height: 0.6669em;
+	}
+.leaflet-left .leaflet-control-scale {
+	margin-left: 5px;
+	}
+.leaflet-bottom .leaflet-control-scale {
+	margin-bottom: 5px;
+	}
+.leaflet-control-scale-line {
+	border: 2px solid #777;
+	border-top: none;
+	line-height: 1.1;
+	padding: 2px 5px 1px;
+	white-space: nowrap;
+	-moz-box-sizing: border-box;
+	     box-sizing: border-box;
+	background: rgba(255, 255, 255, 0.8);
+	text-shadow: 1px 1px #fff;
+	}
+.leaflet-control-scale-line:not(:first-child) {
+	border-top: 2px solid #777;
+	border-bottom: none;
+	margin-top: -2px;
+	}
+.leaflet-control-scale-line:not(:first-child):not(:last-child) {
+	border-bottom: 2px solid #777;
+	}
+
+.leaflet-touch .leaflet-control-attribution,
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	box-shadow: none;
+	}
+.leaflet-touch .leaflet-control-layers,
+.leaflet-touch .leaflet-bar {
+	border: 2px solid rgba(0,0,0,0.2);
+	background-clip: padding-box;
+	}
+
+
+/* popup */
+
+.leaflet-popup {
+	position: absolute;
+	text-align: center;
+	margin-bottom: 20px;
+	}
+.leaflet-popup-content-wrapper {
+	padding: 1px;
+	text-align: left;
+	border-radius: 12px;
+	}
+.leaflet-popup-content {
+	margin: 13px 24px 13px 20px;
+	line-height: 1.3;
+	font-size: 13px;
+	font-size: 1.08333em;
+	min-height: 1px;
+	}
+.leaflet-popup-content p {
+	margin: 17px 0;
+	margin: 1.3em 0;
+	}
+.leaflet-popup-tip-container {
+	width: 40px;
+	height: 20px;
+	position: absolute;
+	left: 50%;
+	margin-top: -1px;
+	margin-left: -20px;
+	overflow: hidden;
+	pointer-events: none;
+	}
+.leaflet-popup-tip {
+	width: 17px;
+	height: 17px;
+	padding: 1px;
+
+	margin: -10px auto 0;
+	pointer-events: auto;
+
+	-webkit-transform: rotate(45deg);
+	   -moz-transform: rotate(45deg);
+	    -ms-transform: rotate(45deg);
+	        transform: rotate(45deg);
+	}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: white;
+	color: #333;
+	box-shadow: 0 3px 14px rgba(0,0,0,0.4);
+	}
+.leaflet-container a.leaflet-popup-close-button {
+	position: absolute;
+	top: 0;
+	right: 0;
+	border: none;
+	text-align: center;
+	width: 24px;
+	height: 24px;
+	font: 16px/24px Tahoma, Verdana, sans-serif;
+	color: #757575;
+	text-decoration: none;
+	background: transparent;
+	}
+.leaflet-container a.leaflet-popup-close-button:hover,
+.leaflet-container a.leaflet-popup-close-button:focus {
+	color: #585858;
+	}
+.leaflet-popup-scrolled {
+	overflow: auto;
+	}
+
+.leaflet-oldie .leaflet-popup-content-wrapper {
+	-ms-zoom: 1;
+	}
+.leaflet-oldie .leaflet-popup-tip {
+	width: 24px;
+	margin: 0 auto;
+
+	-ms-filter: "progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678)";
+	filter: progid:DXImageTransform.Microsoft.Matrix(M11=0.70710678, M12=0.70710678, M21=-0.70710678, M22=0.70710678);
+	}
+
+.leaflet-oldie .leaflet-control-zoom,
+.leaflet-oldie .leaflet-control-layers,
+.leaflet-oldie .leaflet-popup-content-wrapper,
+.leaflet-oldie .leaflet-popup-tip {
+	border: 1px solid #999;
+	}
+
+
+/* div icon */
+
+.leaflet-div-icon {
+	background: #fff;
+	border: 1px solid #666;
+	}
+
+
+/* Tooltip */
+/* Base styles for the element that has a tooltip */
+.leaflet-tooltip {
+	position: absolute;
+	padding: 6px;
+	background-color: #fff;
+	border: 1px solid #fff;
+	border-radius: 3px;
+	color: #222;
+	white-space: nowrap;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+	}
+.leaflet-tooltip.leaflet-interactive {
+	cursor: pointer;
+	pointer-events: auto;
+	}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	position: absolute;
+	pointer-events: none;
+	border: 6px solid transparent;
+	background: transparent;
+	content: "";
+	}
+
+/* Directions */
+
+.leaflet-tooltip-bottom {
+	margin-top: 6px;
+}
+.leaflet-tooltip-top {
+	margin-top: -6px;
+}
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-top:before {
+	left: 50%;
+	margin-left: -6px;
+	}
+.leaflet-tooltip-top:before {
+	bottom: 0;
+	margin-bottom: -12px;
+	border-top-color: #fff;
+	}
+.leaflet-tooltip-bottom:before {
+	top: 0;
+	margin-top: -12px;
+	margin-left: -6px;
+	border-bottom-color: #fff;
+	}
+.leaflet-tooltip-left {
+	margin-left: -6px;
+}
+.leaflet-tooltip-right {
+	margin-left: 6px;
+}
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+	top: 50%;
+	margin-top: -6px;
+	}
+.leaflet-tooltip-left:before {
+	right: 0;
+	margin-right: -12px;
+	border-left-color: #fff;
+	}
+.leaflet-tooltip-right:before {
+	left: 0;
+	margin-left: -12px;
+	border-right-color: #fff;
+	}
+
+/* Printing */
+
+@media print {
+	/* Prevent printers from removing background-images of controls. */
+	.leaflet-control {
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+		}
+	}
+
+</style>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --sb:#0E2230;--sb2:#14303F;--sbh:rgba(255,255,255,.05);--sba:rgba(255,255,255,.10);
+  --acc:#2E9E6A;--acc-d:#237F55;--blu:#2F6FD6;--org:#E0921B;--red:#D9463E;--tel:#1E9E9A;
+  --bg:#EEF2F5;--wh:#fff;--txt:#132030;--t2:#4B5A6B;--t3:#8A97A6;--brd:#DCE3EA;--brd2:#CBD5DF;--pri:#0E2230;
+  --r:12px;--r-sm:8px;--sbw:232px;--sbw-c:64px;--tbh:56px;
+  --sh:0 1px 2px rgba(15,32,48,.05);--sh2:0 8px 24px -12px rgba(15,32,48,.25);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+#app{display:flex;width:100%;height:100%}
+button,input,select{font-family:inherit}
+:focus-visible{outline:2px solid var(--blu);outline-offset:2px}
+
+/* ========== SIDEBAR ========== */
+.sb{width:var(--sbw);background:var(--sb);display:flex;flex-direction:column;flex-shrink:0;z-index:30;transition:width .2s ease;position:relative;
+  background-image:
+    radial-gradient(1200px 400px at -10% -10%,rgba(46,158,106,.18),transparent 60%);
+}
+.sb-brand{padding:18px 18px 14px;display:flex;align-items:center;gap:11px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sb-logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(145deg,#2E9E6A,#1E9E9A);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff}
+.sb-logo svg{width:19px;height:19px}
+.sb-brand h1{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px;line-height:1.1;white-space:nowrap}
+.sb-brand p{font-size:11px;color:#7F93A6;margin-top:3px;white-space:nowrap}
+.sb-new{margin:14px 14px 8px;background:var(--acc);color:#fff;border:none;border-radius:var(--r-sm);padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .15s;width:calc(100% - 28px);white-space:nowrap;overflow:hidden}
+.sb-new:hover{background:var(--acc-d)}
+.sb-new svg{width:15px;height:15px;flex-shrink:0}
+.sb-sec{padding:14px 20px 6px;font-size:11px;font-weight:600;color:#5F7488;white-space:nowrap}
+.sb-nav{flex:1;padding:2px 10px;overflow-y:auto;overflow-x:hidden}
+.sb-i{display:flex;align-items:center;gap:11px;padding:9px 12px;margin:2px 0;border-radius:var(--r-sm);color:#A6B5C4;cursor:pointer;font-size:13px;font-weight:500;transition:background .15s,color .15s;user-select:none;white-space:nowrap;position:relative}
+.sb-i:hover{background:var(--sbh);color:#E8EEF4}
+.sb-i.active{background:var(--sba);color:#fff;font-weight:600}
+.sb-i.active::before{content:"";position:absolute;left:-10px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--acc)}
+.sb-i svg{width:17px;height:17px;flex-shrink:0}
+.sb-foot{padding:10px 10px 12px;border-top:1px solid rgba(255,255,255,.06)}
+.sb-fi{display:flex;align-items:center;gap:11px;padding:8px 12px;border-radius:var(--r-sm);color:#7F93A6;cursor:pointer;font-size:12.5px;transition:.15s;white-space:nowrap}
+.sb-fi:hover{color:#D6DEE6;background:var(--sbh)}
+.sb-fi svg{width:16px;height:16px;flex-shrink:0}
+.sb-col{margin-top:4px;background:transparent;border:1px solid rgba(255,255,255,.1);color:#7F93A6;width:100%;border-radius:var(--r-sm);padding:7px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;font-size:12px}
+.sb-col:hover{color:#fff;border-color:rgba(255,255,255,.25)}
+.sb-col svg{width:15px;height:15px;transition:transform .2s}
+/* collapsed state */
+body.sb-c .sb{width:var(--sbw-c)}
+body.sb-c .sb-brand{padding:18px 15px 14px}
+body.sb-c .sb-brand h1,body.sb-c .sb-brand p,body.sb-c .sb-sec,body.sb-c .sb-i span,body.sb-c .sb-fi span,body.sb-c .sb-new span,body.sb-c .sb-col span{display:none}
+body.sb-c .sb-new{width:36px;padding:9px;justify-content:center;margin:14px 14px 8px}
+body.sb-c .sb-i,body.sb-c .sb-fi{justify-content:center;padding:10px 0}
+body.sb-c .sb-col svg{transform:rotate(180deg)}
+body.sb-c .sb-i:hover::after{content:attr(data-tip);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);background:var(--pri);color:#fff;font-size:12px;font-weight:600;padding:5px 9px;border-radius:6px;white-space:nowrap;box-shadow:var(--sh2);z-index:50}
+
+/* ========== MAIN ========== */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{background:var(--wh);padding:0 20px;height:var(--tbh);display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--brd);flex-shrink:0}
+.tb-menu{display:none;width:36px;height:36px;align-items:center;justify-content:center;border-radius:var(--r-sm);border:1px solid var(--brd);background:#fff;cursor:pointer;color:var(--t2)}
+.tb-menu svg{width:18px;height:18px}
+.tb-app{font-size:14px;font-weight:700;color:var(--t2)}
+.tb-sep{color:var(--brd2);font-size:16px}
+.tb-page{font-size:14px;font-weight:700;color:var(--txt)}
+.tb-tab{font-size:13px;font-weight:500;color:var(--t2);padding:4px 0;border-bottom:2px solid transparent;cursor:pointer}
+.tb-tab.active{color:var(--pri);border-bottom-color:var(--pri);font-weight:700}
+.tb-search{margin-left:auto;position:relative;width:260px;max-width:40vw}
+.tb-search input{padding:8px 12px 8px 34px;border:1px solid var(--brd);border-radius:var(--r-sm);font-size:13px;background:var(--bg);width:100%}
+.tb-search input:focus{outline:none;border-color:var(--blu);background:#fff;box-shadow:0 0 0 3px rgba(47,111,214,.12)}
+.ts-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t3);width:15px;height:15px}
+.tb-icons{display:flex;align-items:center;gap:6px}
+.ib{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-sm);cursor:pointer;color:var(--t2);transition:.15s;position:relative}
+.ib:hover{background:var(--bg);color:var(--txt)}.ib svg{width:18px;height:18px}
+.ib .dot{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--org);border:2px solid #fff}
+.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,#2E9E6A,#1E9E9A);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px}
+.sb-ovl{display:none;position:fixed;inset:0;background:rgba(14,34,48,.45);z-index:25}
+
+/* ========== CONTENT ========== */
+.content{flex:1;overflow-y:auto;padding:24px 28px 32px;scroll-behavior:smooth}
+.page{display:none}.page.active{display:block}
+
+/* page header */
+.ph{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px 16px}
+.ph-t{font-size:24px;font-weight:800;color:var(--txt);letter-spacing:-.5px;line-height:1.15}
+.ph-s{font-size:13px;color:var(--t2);margin-top:4px;max-width:62ch}
+.ph-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+
+/* cards */
+.card{background:var(--wh);border:1px solid var(--brd);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh)}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap}
+.card-t{font-size:13.5px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:8px}
+.card-t svg{width:16px;height:16px;color:var(--acc)}
+
+/* stat cards */
+.sc{background:var(--wh);border:1px solid var(--brd);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.sc::after{content:"";position:absolute;left:18px;right:18px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:linear-gradient(90deg,var(--acc),var(--tel));opacity:.55}
+.sc-l{font-size:12px;font-weight:600;color:var(--t2);margin-bottom:8px;letter-spacing:0;text-transform:none}
+.sc-v{font-size:28px;font-weight:800;color:var(--txt);line-height:1.05;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.sc-u{font-size:13px;font-weight:500;color:var(--t3);margin-top:4px}
+
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:100px;font-size:10.5px;font-weight:700;letter-spacing:.2px;line-height:1.6}
+.bg{background:#DDF5E8;color:#166534}.bo{background:#FCEFD3;color:#92400e}.bb{background:#DEE9FB;color:#1e40af}.br{background:#FBE1DF;color:#991b1b}.bgr{background:#EDF1F5;color:#64748b}.bt{background:#D5F2F1;color:#0f766e}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:background .15s,border-color .15s,box-shadow .15s;white-space:nowrap;line-height:1.2}
+.btn svg{flex-shrink:0}
+.btn-d{background:var(--pri);color:#fff}.btn-d:hover{background:#1A3A4F}
+.btn-g{background:var(--acc);color:#fff}.btn-g:hover{background:var(--acc-d)}
+.btn-o{background:#fff;color:var(--txt);border-color:var(--brd2)}.btn-o:hover{background:var(--bg);border-color:#B8C4D0}
+.btn-b{background:var(--blu);color:#fff}.btn-b:hover{background:#245CB6}
+.btn-del{background:transparent;color:var(--red);padding:5px 8px}.btn-del:hover{background:#FBE1DF}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* forms */
+.fl{font-size:11.5px;font-weight:600;color:var(--t2);margin-bottom:5px;display:block;letter-spacing:0;text-transform:none}
+.inp{width:100%;padding:8px 12px;border:1px solid var(--brd2);border-radius:var(--r-sm);font-size:13px;background:#fff;color:var(--txt);transition:.15s}
+.inp:focus{outline:none;border-color:var(--blu);box-shadow:0 0 0 3px rgba(47,111,214,.12)}
+.sel{width:100%;padding:8px 12px;border:1px solid var(--brd2);border-radius:var(--r-sm);font-size:13px;background:#fff;color:var(--txt);cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A97A6' stroke-width='2.2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+.sel:focus{outline:none;border-color:var(--blu);box-shadow:0 0 0 3px rgba(47,111,214,.12)}
+
+/* file entries */
+.fe{background:#fff;border:1px solid var(--brd);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:10px;transition:border-color .15s;border-left:3px solid var(--brd2)}
+.fe:hover{border-color:var(--brd2);border-left-color:var(--acc)}
+.fe-top{display:grid;gap:10px;margin-bottom:10px}
+.fe-shp{grid-template-columns:1fr 1fr}.fe-rst{grid-template-columns:1fr}
+.fe-bot{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fe-meta{font-size:11.5px;color:var(--t3);font-weight:500;display:flex;align-items:center;gap:6px}
+
+/* upload */
+.up-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px dashed var(--brd2);border-radius:var(--r-sm);font-size:12px;color:var(--t2);cursor:pointer;background:var(--bg);transition:.15s;font-weight:500}
+.up-btn:hover{border-color:var(--blu);color:var(--blu);background:#EEF4FD}
+.up-btn input{display:none}
+
+/* progress */
+.pw{height:6px;background:#E3E9EF;border-radius:100px;overflow:hidden;flex:1;min-width:80px}
+.pb{height:100%;border-radius:100px;transition:width .4s ease;background:var(--acc)}
+.pl{font-size:11.5px;color:var(--t3);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* tables */
+.tw{overflow-x:auto;border-radius:var(--r);border:1px solid var(--brd);background:#fff}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{background:#F6F8FA;padding:11px 14px;text-align:left;font-size:11.5px;font-weight:700;color:var(--t2);border-bottom:1px solid var(--brd);white-space:nowrap;cursor:pointer;user-select:none;text-transform:none;letter-spacing:0;position:sticky;top:0;z-index:1}
+.tbl th:hover{background:#EDF1F5;color:var(--txt)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--brd);color:var(--txt);vertical-align:middle;font-variant-numeric:tabular-nums}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:#F8FAFC}
+.mono{font-family:'DM Mono',monospace;font-size:12px}
+
+/* pagination */
+.pag{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--t2)}
+.pg{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid var(--brd2);cursor:pointer;background:#fff;color:var(--txt);font-size:13px;transition:.15s}
+.pg.active{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:700}
+.pg:hover:not(.active){background:var(--bg)}
+
+/* log */
+.log{background:var(--sb);color:#A6B5C4;font-family:'DM Mono',monospace;font-size:11.5px;line-height:1.7;padding:14px 16px;border-radius:var(--r-sm);height:260px;overflow-y:auto}
+.log::-webkit-scrollbar{width:4px}.log::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+.ls{color:#4ade80}.le{color:#f87171}.li{color:#60a5fa}.lw{color:#fbbf24}.ld{color:#5F7488}
+
+/* charts */
+.cw{position:relative;padding:16px 18px;background:#fff;border:1px solid var(--brd);border-radius:var(--r);box-shadow:var(--sh);min-width:0}
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.ct{font-size:13.5px;font-weight:700;color:var(--txt)}.cs{font-size:11.5px;color:var(--t3);margin-top:2px}
+.ca{display:flex;gap:4px;flex-wrap:wrap}
+.cw canvas{display:block;width:100%}
+
+/* storage */
+.stbar{height:8px;background:#E3E9EF;border-radius:100px;overflow:hidden;margin:12px 0 10px}
+.stfill{height:100%;background:linear-gradient(90deg,var(--acc),var(--tel));border-radius:100px;transition:.5s}
+
+/* empty */
+.empty{text-align:center;padding:36px 24px;color:var(--t3)}
+.empty svg{width:40px;height:40px;margin-bottom:10px;opacity:.35}
+.empty h3{font-size:14px;color:var(--t2);margin-bottom:4px}
+.empty p{font-size:12.5px}
+
+/* toast */
+#toasts{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+.toast{background:var(--pri);color:#fff;padding:11px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;box-shadow:0 10px 30px -8px rgba(14,34,48,.5);animation:su .25s ease;max-width:340px}
+.toast.s{border-left:3px solid var(--acc)}.toast.e{border-left:3px solid var(--red)}.toast.i{border-left:3px solid var(--blu)}
+@keyframes su{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(14,34,48,.5);display:flex;align-items:center;justify-content:center;z-index:1000;backdrop-filter:blur(2px)}
+.overlay.hidden{display:none}
+.modal{background:#fff;border-radius:16px;padding:24px;width:440px;max-width:94vw;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}
+.modal-t{font-size:17px;font-weight:800;margin-bottom:4px}.modal-s{font-size:13px;color:var(--t2);margin-bottom:18px}
+
+/* control row */
+.ctrl-row{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--brd);border-radius:var(--r-sm);padding:6px 10px}
+.ctrl-row label{font-size:12px;color:var(--t2);font-weight:600;white-space:nowrap}
+.ctrl-row input[type=number]{width:56px;padding:5px 6px;border:1px solid var(--brd2);border-radius:6px;font-size:12.5px;text-align:center;background:#fff}
+
+/* processing list */
+.proc-i{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--brd);font-size:12.5px}
+.proc-i:last-child{border-bottom:none}
+.proc-n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ========== MAP PAGE ========== */
+#p-map.active{display:flex;flex-direction:column;height:100%;min-height:520px}
+#p-map .ph{margin-bottom:16px;flex-shrink:0}
+.map-wrap{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
+.map-stage{position:relative;min-height:0;border-radius:var(--r);overflow:hidden;border:1px solid var(--brd);background:#DDE5EC;box-shadow:var(--sh)}
+#map-el{position:absolute;inset:0;height:100%;width:100%;background:#DDE5EC;z-index:1}
+.map-status{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(238,242,245,.85);backdrop-filter:blur(2px);pointer-events:none;transition:opacity .25s}
+.map-status.hide{opacity:0}
+.map-status>div{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--brd);border-radius:100px;padding:9px 16px;font-size:13px;font-weight:600;color:var(--t2);box-shadow:var(--sh2)}
+.map-status.err{background:transparent;backdrop-filter:none;align-items:flex-end;padding:0 16px 36px}
+.map-status.err>div{color:var(--red);border-color:#F3C5C2;border-radius:10px;font-weight:500;max-width:520px;line-height:1.4}
+.map-status .spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--brd2);border-top-color:var(--acc);animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.map-panel{display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;padding-right:2px}
+.map-panel .card{padding:14px 16px;flex-shrink:0}
+.map-panel .card-t{margin-bottom:10px;font-size:13px}
+.map-hint{font-size:12px;color:var(--t3);line-height:1.5}
+.map-panel input[type=checkbox]{accent-color:var(--acc);width:15px;height:15px}
+/* leaflet chrome tuned to the app */
+.leaflet-container{font-family:'DM Sans',system-ui,sans-serif;font-size:12px}
+.leaflet-bar{border:1px solid var(--brd2)!important;box-shadow:var(--sh2)!important;border-radius:var(--r-sm)!important;overflow:hidden}
+.leaflet-bar a{color:var(--txt)!important;border-bottom-color:var(--brd)!important}
+.leaflet-control-layers{border:1px solid var(--brd2)!important;box-shadow:var(--sh2)!important;border-radius:var(--r-sm)!important;font-size:12.5px}
+.leaflet-control-layers-toggle{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23132030' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 3 9 5-9 5-9-5 9-5Z'/%3E%3Cpath d='m3 13 9 5 9-5'/%3E%3C/svg%3E")!important;background-size:20px 20px!important;width:36px!important;height:36px!important}
+.leaflet-control-attribution{font-size:10px!important;background:rgba(255,255,255,.75)!important}
+.leaflet-tooltip{border-radius:6px;border:1px solid var(--brd2);font-weight:600;box-shadow:var(--sh2)}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#C3CED9;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#A8B6C4}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){
+  .map-wrap{grid-template-columns:1fr;grid-template-rows:minmax(360px,1fr) auto}
+  .map-panel{max-height:40vh}
+  .content{padding:18px 16px 28px}
+  .tb-search{display:none}
+}
+@media(max-width:760px){
+  .sb{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform .2s ease;width:var(--sbw)!important;overflow:hidden;box-shadow:0 0 40px rgba(0,0,0,.35)}
+  body.sb-open .sb{transform:translateX(0)}
+  body.sb-open .sb-ovl{display:block}
+  body.sb-c .sb-brand h1,body.sb-c .sb-brand p,body.sb-c .sb-sec{display:block}
+  body.sb-c .sb-i span,body.sb-c .sb-fi span,body.sb-c .sb-new span{display:inline}
+  body.sb-c .sb-brand{padding:18px 18px 14px}
+  body.sb-c .sb-new{width:calc(100% - 28px);padding:9px 14px;justify-content:flex-start}
+  body.sb-c .sb-i,body.sb-c .sb-fi{justify-content:flex-start;padding:9px 12px}
+  body.sb-c .sb-i:hover::after{display:none}
+  .sb-col{display:none}
+  .tb-menu{display:flex}
+  .tb-app{display:none}.tb-sep{display:none}
+  .g2,.g3,.g4{grid-template-columns:1fr}
+  .ph-t{font-size:21px}
+  .ph-r{width:100%}
+  .ph-r .sel{flex:1;min-width:140px;width:auto!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="sb-ovl" onclick="toggleSidebar(false)"></div>
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-brand">
+    <div class="sb-logo"><svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/></svg></div>
+    <div><h1>GeoAnalyzer Pro</h1><p>Análise espacial · v2.5</p></div>
+  </div>
+  <button class="sb-new" onclick="newProject()" title="Novo projeto">
+    <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+    <span>Novo projeto</span>
+  </button>
+  <div class="sb-sec">Fluxo de trabalho</div>
+  <nav class="sb-nav">
+    <div class="sb-i active" data-page="fm" data-tip="Arquivos" onclick="nav('fm')"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/></svg><span>Arquivos</span></div>
+    <div class="sb-i" data-page="proc" data-tip="Processamento" onclick="nav('proc')"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg><span>Processamento</span></div>
+    <div class="sb-i" data-page="dt" data-tip="Tabela de dados" onclick="nav('dt')"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375Z"/></svg><span>Tabela de dados</span></div>
+    <div class="sb-i" data-page="ins" data-tip="Insights" onclick="nav('ins')"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6"/></svg><span>Insights</span></div>
+    <div class="sb-i" data-page="map" data-tip="Mapa" onclick="nav('map')"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z"/></svg><span>Mapa</span></div>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-fi" data-tip="Configurações"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg><span>Configurações</span></div>
+    <div class="sb-fi" data-tip="Suporte"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/></svg><span>Suporte</span></div>
+    <button class="sb-col" onclick="toggleCollapse()" title="Recolher / expandir menu">
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"/></svg>
+      <span>Recolher</span>
+    </button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+<header class="topbar">
+  <button class="tb-menu" onclick="toggleSidebar()" aria-label="Abrir menu">
+    <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+  </button>
+  <span class="tb-app">GeoAnalyzer Pro</span>
+  <span class="tb-sep">/</span>
+  <span class="tb-page" id="crumb-page">Arquivos</span>
+  <div class="tb-search">
+    <svg class="ts-ico" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+    <input type="text" placeholder="Buscar camadas e rasters...">
+  </div>
+  <div class="tb-icons">
+    <div class="ib" title="Notificações"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg><span class="dot"></span></div>
+    <div class="ib" title="Ajuda"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/></svg></div>
+    <div class="avatar">AG</div>
+  </div>
+</header>
+
+<div class="content">
+
+<!-- ===== PAGE: FILE MANAGEMENT ===== -->
+<div id="p-fm" class="page active">
+  <div class="ph">
+    <div><div class="ph-t">Arquivos</div><div class="ph-s">Carregue os shapefiles e rasters que serão usados na análise.</div></div>
+
+  </div>
+  <div class="g2" style="margin-bottom:18px">
+    <!-- Shapefile card -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-t">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>
+          Shapefiles
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="ctrl-row" style="padding:5px 10px;">
+            <label style="font-size:12px;color:var(--t2);font-weight:600;white-space:nowrap">Nº Shapes:</label>
+            <input type="number" id="num-shp" value="1" min="1" max="20" style="width:50px;padding:4px 6px;border:1px solid var(--brd);border-radius:6px;font-size:12px;text-align:center;font-family:inherit">
+            <button class="btn btn-d btn-sm" style="padding:4px 10px;font-size:12px" onclick="updateNumShapes()">Atualizar</button>
+          </div>
+          <button class="btn btn-d btn-sm" onclick="addShp()">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            Adicionar Shapefile
+          </button>
+        </div>
+      </div>
+      <div id="shp-list"><div class="empty" style="padding:16px"><p>Clique em "+ Adicionar Shapefile" para começar.</p></div></div>
+    </div>
+    <!-- Raster card -->
+    <div class="card">
+      <div class="card-hd">
+        <div class="card-t">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+          Rasters
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="ctrl-row" style="padding:5px 10px;">
+            <label style="font-size:12px;color:var(--t2);font-weight:600;white-space:nowrap">Nº Rasters:</label>
+            <input type="number" id="num-rst" value="2" min="1" max="20" style="width:50px;padding:4px 6px;border:1px solid var(--brd);border-radius:6px;font-size:12px;text-align:center;font-family:inherit">
+            <button class="btn btn-d btn-sm" style="padding:4px 10px;font-size:12px" onclick="updateNumRasters()">Atualizar</button>
+          </div>
+          <button class="btn btn-d btn-sm" onclick="addRst()">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:12px;height:12px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            Adicionar Raster
+          </button>
+        </div>
+      </div>
+      <div id="rst-list"><div class="empty" style="padding:16px"><p>Clique em "+ Adicionar Raster" para começar.</p></div></div>
+    </div>
+  </div>
+  <!-- Bottom row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px">
+    <div class="card" style="background:linear-gradient(135deg,#0d1b2e,#1e3a5f);color:#fff;min-height:130px;position:relative;overflow:hidden">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px">Última camada carregada</div>
+      <div style="font-size:18px;font-weight:800" id="prev-name">Nenhum dado carregado</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px" id="prev-sub"></div>
+    </div>
+    <div class="card" style="min-height:130px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:.2s" onclick="nav('proc')" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+      <svg style="width:34px;height:34px;color:var(--blu);margin-bottom:10px" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/></svg>
+      <div style="font-size:14px;font-weight:700">Gerar insights espaciais</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:4px;text-align:center">Executar a análise com os arquivos carregados</div>
+    </div>
+    <div class="card" style="min-height:130px;background:var(--pri);color:#fff">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">Uso de armazenamento</div>
+      <div style="font-size:28px;font-weight:800;letter-spacing:-1px"><span id="sto-val">0.00</span><span style="font-size:15px;font-weight:400"> GB / 5.0 GB</span></div>
+      <div class="stbar" style="background:rgba(255,255,255,.15)"><div class="stfill" id="sto-bar" style="width:0%"></div></div>
+      <div style="display:flex;gap:16px;font-size:11px;color:rgba(255,255,255,.5)">
+        <span>● Shapefiles <span id="sto-shp" style="color:#fff;font-weight:700">0 KB</span></span>
+        <span>● Rasters <span id="sto-rst" style="color:#fff;font-weight:700">0 KB</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: PROCESSING ===== -->
+<div id="p-proc" class="page">
+  <div class="ph">
+    <div><div class="ph-t">Processamento</div><div class="ph-s">Recorta cada raster pelas feições dos shapefiles e calcula as estatísticas por classe.</div></div>
+    <div class="ph-r">
+      <button class="btn btn-g" id="run-btn" onclick="runProcessing()" style="font-size:14px;padding:9px 20px">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>
+        Iniciar Processamento
+      </button>
+      <button class="btn btn-o" onclick="clearAll()">Limpar Resultados</button>
+    </div>
+  </div>
+  <div class="g2" style="margin-bottom:18px">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-t" style="margin-bottom:14px">⚡ Progresso Geral</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:13px;color:var(--t2)" id="gp-lbl">Aguardando...</span>
+          <span style="font-size:14px;font-weight:800" id="gp-pct">0%</span>
+        </div>
+        <div style="height:10px;background:#e2e8f0;border-radius:100px;overflow:hidden;margin-bottom:14px">
+          <div id="gp-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--acc),var(--tel));border-radius:100px;transition:.4s"></div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:12px;color:var(--t2)">
+          <span>Shapes: <strong id="pc-shp">0</strong></span>
+          <span>Rasters: <strong id="pc-rst">0</strong></span>
+          <span>Combinações: <strong id="pc-cmb">0</strong></span>
+          <span>Concluídas: <strong id="pc-done">0</strong></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-t" style="margin-bottom:14px">Progresso por Arquivo</div>
+        <div id="pi-list"><div class="empty" style="padding:16px"><p>Nenhum processamento iniciado</p></div></div>
+      </div>
+    </div>
+    <div class="card" style="height:100%">
+      <div class="card-hd">
+        <div class="card-t"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25z"/></svg>Processing Log</div>
+        <button class="btn btn-o btn-sm" onclick="clrLog()">Limpar</button>
+      </div>
+      <div class="log" id="proc-log"><span class="ld">— GeoAnalyzer Pro v2.4 — Ready —</span></div>
+    </div>
+  </div>
+  <div class="card" id="proc-sum" style="display:none">
+    <div class="card-hd">
+      <div class="card-t">✅ Processamento Concluído</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-o btn-sm" onclick="nav('dt')">Ver tabela</button>
+        <button class="btn btn-o btn-sm" onclick="nav('ins')">Ver insights</button>
+        <button class="btn btn-o btn-sm" onclick="nav('map')">Ver mapa</button>
+      </div>
+    </div>
+    <div class="g4" id="proc-sum-stats"></div>
+  </div>
+</div>
+
+<!-- ===== PAGE: DATA TABLE ===== -->
+<div id="p-dt" class="page">
+  <div class="ph">
+    <div><div class="ph-t">Tabela de dados</div><div class="ph-s" id="dt-sub">Nenhum resultado disponível.</div></div>
+    <div class="ph-r">
+      <button class="btn btn-o" onclick="showAdvFilt()">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:15px;height:15px"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"/></svg>
+        Filtros Avançados
+      </button>
+      <button class="btn btn-d" onclick="expXLSX()">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        Exportar XLSX
+      </button>
+    </div>
+  </div>
+  <div class="g4" style="margin-bottom:18px">
+    <div class="sc"><div class="sc-l">Área total (ha)</div><div class="sc-v" id="dt-area">—</div></div>
+    <div class="sc"><div class="sc-l">Moda Dominante</div><div class="sc-v" id="dt-mode" style="font-size:18px">—</div></div>
+    <div class="sc"><div class="sc-l">Shapes Processados</div><div class="sc-v" id="dt-shps">—</div></div>
+    <div class="sc"><div class="sc-l">Média de Atributos</div><div class="sc-v" id="dt-avg">—</div></div>
+  </div>
+  <!-- Filters -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <select class="sel" id="flt-shp" style="width:170px" onchange="renderDT()"><option value="">Todos os Shapes</option></select>
+    <select class="sel" id="flt-rst" style="width:170px" onchange="renderDT()"><option value="">Todos os Rasters</option></select>
+    <input type="text" class="inp" id="flt-attr" style="width:150px" placeholder="Filtrar atributo..." oninput="renderDT()">
+    <select class="sel" id="dt-rpp" style="width:80px" onchange="dtPage=1;renderDT()">
+      <option value="10">10</option><option value="25" selected>25</option><option value="50">50</option><option value="100">100</option>
+    </select>
+    <button class="btn btn-o btn-sm" onclick="expFilteredXLSX()">Export XLSX</button>
+  </div>
+  <!-- Table -->
+  <div class="tw card" style="padding:0;overflow:hidden;margin-bottom:12px">
+    <table class="tbl" id="results-tbl">
+      <thead><tr>
+        <th style="width:30px"></th>
+        <th onclick="srtTbl('shapeName')">Nome do Shape</th>
+        <th onclick="srtTbl('attributeValue')">Atributo</th>
+        <th onclick="srtTbl('totalAreaHa')">Área HA</th>
+        <th>%</th>
+        <th onclick="srtTbl('mode')">Moda</th>
+        <th onclick="srtTbl('rasterName')">Nome do Raster</th>
+      </tr></thead>
+      <tbody id="dt-tbody"><tr><td colspan="7"><div class="empty"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/></svg><h3>Sem Resultados</h3><p>Execute o processamento para ver os dados.</p></div></td></tr></tbody>
+    </table>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+    <span style="font-size:12px;color:var(--t2)" id="dt-pg-info">Exibindo 0 resultados</span>
+    <div class="pag" id="dt-pag"></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-t" style="margin-bottom:14px">Sumário de Atributos</div>
+      <div style="font-size:13px">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--brd)"><span style="color:var(--t2)">Total de Colunas Processadas</span><strong id="sum-cols">—</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--brd)"><span style="color:var(--t2)">Classes de Uso Detectadas</span><strong id="sum-cls">—</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0"><span style="color:var(--t2)">Data da Última Extração</span><strong id="sum-dt">—</strong></div>
+      </div>
+    </div>
+    <div class="card" style="display:flex;align-items:center;gap:16px">
+      <div style="width:48px;height:48px;background:var(--pri);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="white" style="width:24px;height:24px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:700">Relatórios Prontos</div>
+        <div style="font-size:12px;color:var(--t2);margin:4px 0 10px">Gere um arquivo Excel com todos os dados e estatísticas.</div>
+        <button class="btn btn-d btn-sm" onclick="expXLSX()">Gerar XLSX analítico</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAGE: INSIGHTS ===== -->
+<div id="p-ins" class="page">
+  <div class="ph">
+    <div><div class="ph-t">Insights</div><div class="ph-s">Projeto ativo: <strong id="ins-proj">Sem projeto ativo</strong></div></div>
+    <div class="ph-r">
+      <select class="sel" id="ins-fshp" style="width:180px" onchange="updCharts()"><option value="">Todos os Shapes</option></select>
+      <select class="sel" id="ins-frst" style="width:180px" onchange="updCharts()"><option value="">Todos os Rasters</option></select>
+      <button class="btn btn-d" onclick="updCharts()">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/></svg>
+        Aplicar
+      </button>
+    </div>
+  </div>
+  <div class="g4" style="margin-bottom:20px">
+    <div class="sc"><div class="sc-l">Total de Área Analisada</div><div class="sc-v" id="ins-area">—</div><div class="sc-u">ha</div></div>
+    <div class="sc"><div class="sc-l">Classes Identificadas</div><div class="sc-v" id="ins-cls">—</div></div>
+    <div class="sc"><div class="sc-l">Rasters analisados</div><div class="sc-v" id="ins-rst">—</div></div>
+    <div class="sc"><div class="sc-l">Shapes Processados</div><div class="sc-v" id="ins-shp">—</div></div>
+  </div>
+  <!-- Charts row 1 -->
+  <div class="g2" style="margin-bottom:18px">
+    <div class="cw">
+      <div class="ch"><div><div class="ct">Distribuição por Classe</div><div class="cs">Área total ha por classe</div></div>
+      <div class="ca"><button class="btn btn-o btn-sm" onclick="expChart('c-pie','png')">PNG</button><button class="btn btn-o btn-sm" onclick="expChart('c-pie','svg')">SVG</button><button class="btn btn-o btn-sm" onclick="expChartCSV('c-pie')">CSV</button></div></div>
+      <canvas id="c-pie" style="max-height:260px"></canvas>
+    </div>
+    <div class="cw">
+      <div class="ch"><div><div class="ct">Área por Classe (Barras)</div><div class="cs">Comparativo em hectares</div></div>
+      <div class="ca"><button class="btn btn-o btn-sm" onclick="expChart('c-bar','png')">PNG</button><button class="btn btn-o btn-sm" onclick="expChart('c-bar','svg')">SVG</button><button class="btn btn-o btn-sm" onclick="expChartCSV('c-bar')">CSV</button></div></div>
+      <canvas id="c-bar" style="max-height:260px"></canvas>
+    </div>
+  </div>
+  <!-- Charts row 2 -->
+  <div class="g3" style="margin-bottom:18px">
+    <div class="cw">
+      <div class="ch"><div><div class="ct">Área por Feature (Top 15)</div><div class="cs">Barras horizontais</div></div>
+      <div class="ca"><button class="btn btn-o btn-sm" onclick="expChart('c-hbar','png')">PNG</button><button class="btn btn-o btn-sm" onclick="expChartCSV('c-hbar')">CSV</button></div></div>
+      <canvas id="c-hbar" style="max-height:240px"></canvas>
+    </div>
+    <div class="cw">
+      <div class="ch"><div><div class="ct">Área Acumulada</div><div class="cs">Progressivo por feature</div></div>
+      <div class="ca"><button class="btn btn-o btn-sm" onclick="expChart('c-line','png')">PNG</button><button class="btn btn-o btn-sm" onclick="expChartCSV('c-line')">CSV</button></div></div>
+      <canvas id="c-line" style="max-height:240px"></canvas>
+    </div>
+    <div class="cw">
+      <div class="ch"><div><div class="ct">Frequência da Moda</div><div class="cs">Classe dominante por feature</div></div>
+      <div class="ca"><button class="btn btn-o btn-sm" onclick="expChart('c-mode','png')">PNG</button><button class="btn btn-o btn-sm" onclick="expChartCSV('c-mode')">CSV</button></div></div>
+      <canvas id="c-mode" style="max-height:240px"></canvas>
+    </div>
+  </div>
+  <!-- Stacked bar -->
+  <div class="cw" style="margin-bottom:18px">
+    <div class="ch"><div><div class="ct">Composição por Feature (Empilhado 100%)</div><div class="cs">Percentual de cada classe por geometria analisada</div></div>
+    <div class="ca"><button class="btn btn-o btn-sm" onclick="expChart('c-stk','png')">PNG</button><button class="btn btn-o btn-sm" onclick="expChart('c-stk','svg')">SVG</button><button class="btn btn-o btn-sm" onclick="expChartCSV('c-stk')">CSV</button></div></div>
+    <canvas id="c-stk" style="max-height:300px"></canvas>
+  </div>
+  <!-- Operations table -->
+  <div class="card">
+    <div class="card-hd"><div class="card-t">Últimas operações</div><button class="btn btn-o btn-sm" onclick="expXLSX()">Exportar log</button></div>
+    <div class="tw" style="border:none"><table class="tbl"><thead><tr><th>ID</th><th>Camada</th><th>Tipo</th><th>Data/hora</th><th>Status</th><th>Precisão</th></tr></thead><tbody id="ops-tbody"><tr><td colspan="6"><div class="empty" style="padding:14px"><p>Sem operações registradas</p></div></td></tr></tbody></table></div>
+  </div>
+</div>
+
+<!-- ===== PAGE: MAP ===== -->
+<div id="p-map" class="page">
+  <div class="ph">
+    <div><div class="ph-t">Mapa</div><div class="ph-s">Visualize as camadas carregadas e os rasters recortados. Clique em uma feature para ver suas estatísticas.</div></div>
+    <div class="ph-r">
+      <select class="sel" id="map-fshp" style="width:180px" onchange="filterMap()"><option value="">Todos os shapes</option></select>
+      <button class="btn btn-b" onclick="renderAllRastersOnMap()" id="btn-render-rst" title="Desenhar os rasters recortados sobre o mapa">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H3.75A1.5 1.5 0 0 0 2.25 6v12a1.5 1.5 0 0 0 1.5 1.5Zm10.5-11.25h.008v.008h-.008V8.25Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/></svg>
+        Visualizar rasters
+      </button>
+      <button class="btn btn-o" onclick="fitBounds()" title="Enquadrar todas as camadas">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+        Enquadrar
+      </button>
+      <button class="btn btn-o" id="btn-labels" onclick="togFeatureLabels()" title="Mostrar/ocultar rótulos das features no mapa">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/></svg>
+        Rótulos
+      </button>
+    </div>
+  </div>
+  <div class="map-wrap">
+    <div class="map-stage">
+      <div id="map-el"></div>
+      <div class="map-status" id="map-status"><div><span class="spin"></span><span id="map-status-txt">Carregando mapa base…</span></div></div>
+    </div>
+    <div class="map-panel">
+      <div class="card">
+        <div class="card-t">Shapes</div>
+        <div id="map-layers"><p class="map-hint">Nenhuma camada carregada. Adicione shapefiles em <b>Arquivos</b>.</p></div>
+      </div>
+      <div class="card" id="map-raster-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="card-t" style="margin:0">Rasters recortados</div>
+          <button class="btn btn-o btn-sm" onclick="clearRasterLayers()">Limpar</button>
+        </div>
+        <div id="map-raster-layers"><p class="map-hint">Execute o processamento para visualizar rasters.</p></div>
+        <div id="map-legend" style="margin-top:12px;display:none">
+          <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:6px">Legenda</div>
+          <div id="map-legend-body"></div>
+        </div>
+      </div>
+      <div class="card" id="map-info" style="display:none">
+        <div class="card-t">Atributos da feature</div>
+        <div id="map-feat" style="font-size:12px"></div>
+      </div>
+      <div class="card">
+        <div class="card-t">Estatísticas da seleção</div>
+        <div id="map-stats" class="map-hint">Clique em uma feature no mapa para ver as estatísticas de cada raster.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .content -->
+</div><!-- .main -->
+</div><!-- #app -->
+
+<!-- Toast container -->
+<div id="toasts"></div>
+
+<!-- Advanced filter modal -->
+<div class="overlay hidden" id="adv-modal">
+  <div class="modal">
+    <div class="modal-t">Filtros Avançados</div>
+    <div class="modal-s">Refine os dados exibidos na tabela de resultados</div>
+    <div style="margin-bottom:12px"><label class="fl">Área Mínima (ha)</label><input type="number" class="inp" id="f-minarea" placeholder="0" min="0"></div>
+    <div style="margin-bottom:12px"><label class="fl">Área Máxima (ha)</label><input type="number" class="inp" id="f-maxarea" placeholder="999999"></div>
+    <div style="margin-bottom:12px"><label class="fl">Classe Mínima</label><input type="number" class="inp" id="f-mincls" placeholder="0"></div>
+    <div style="margin-bottom:18px"><label class="fl">Classe Máxima</label><input type="number" class="inp" id="f-maxcls" placeholder="999"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-o" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-d" onclick="applyAdv()">Aplicar Filtros</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts: primary CDN + fallback for each library (Leaflet CSS is inlined in <head>) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>if(!window.L){document.write('<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"><\/script>')}</script>
+<script src="https://cdn.jsdelivr.net/npm/shpjs@4.0.4/dist/shp.js"></script>
+<script>if(!window.shp){document.write('<script src="https://unpkg.com/shpjs@4.0.4/dist/shp.js"><\/script>')}</script>
+<script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+<script>if(!window.GeoTIFF){document.write('<script src="https://unpkg.com/geotiff@2.1.3/dist-browser/geotiff.js"><\/script>')}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+<script>if(!window.proj4){document.write('<script src="https://cdn.jsdelivr.net/npm/proj4@2.9.0/dist/proj4.js"><\/script>')}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+/* ===== Shell UI (v2): sidebar, breadcrumb, library check ===== */
+const PAGE_TITLES={fm:'Arquivos',proc:'Processamento',dt:'Tabela de dados',ins:'Insights',map:'Mapa'};
+function toggleSidebar(force){
+  const open=typeof force==='boolean'?force:!document.body.classList.contains('sb-open');
+  document.body.classList.toggle('sb-open',open);
+}
+function toggleCollapse(){
+  const c=document.body.classList.toggle('sb-c');
+  try{localStorage.setItem('ga-sb-collapsed',c?'1':'0')}catch(e){}
+  if(window.S&&S.map)setTimeout(()=>S.map.invalidateSize(),220);
+}
+try{if(localStorage.getItem('ga-sb-collapsed')==='1')document.body.classList.add('sb-c')}catch(e){}
+function setCrumb(p){const el=document.getElementById('crumb-page');if(el)el.textContent=PAGE_TITLES[p]||'';}
+window.addEventListener('DOMContentLoaded',()=>{
+  const missing=[];
+  if(!window.L)missing.push('Leaflet (mapa)');
+  if(!window.shp)missing.push('shpjs (shapefiles)');
+  if(!window.GeoTIFF)missing.push('geotiff (rasters)');
+  if(!window.proj4)missing.push('proj4 (projeções)');
+  if(missing.length&&typeof toast==='function')toast('Sem acesso à internet para carregar: '+missing.join(', '),'e');
+});
+</script>
+<script>
+/* ===== MiniChart — zero-dependency canvas chart renderer ===== */
+const MiniChart=(function(){
+  const COLORS=['#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#14b8a6',
+                '#f97316','#ec4899','#06b6d4','#84cc16','#6366f1','#a855f7',
+                '#10b981','#eab308','#0ea5e9','#d946ef','#64748b','#fb923c'];
+
+  function sz(c,maxH){
+    const pw=c.parentElement?.clientWidth||500;
+    const w=Math.max(200,pw-2), h=Math.min(maxH||260,Math.max(160,pw*0.55));
+    c.width=w; c.height=h;
+    const ctx=c.getContext('2d');
+    ctx.clearRect(0,0,w,h);
+    return{ctx,w,h};
+  }
+
+  function empty(c,maxH,msg){
+    const{ctx,w,h}=sz(c,maxH);
+    ctx.fillStyle='#f1f5f9';ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#94a3b8';ctx.font='13px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(msg||'Sem dados',w/2,h/2);
+  }
+
+  /* ----- PIE / DOUGHNUT ----- */
+  function pie(c,labels,data,colors,doughnut,maxH){
+    if(!data||!data.length||!data.reduce((s,v)=>s+(v||0),0)){empty(c,maxH);return;}
+    const legRows=Math.ceil(labels.length/3),legH=legRows*18+12;
+    const{ctx,w,h}=sz(c,maxH);
+    const chartH=h-legH;
+    const cx=w/2,cy=chartH/2,r=Math.min(cx*.82,cy*.82);
+    const total=data.reduce((s,v)=>s+(v||0),0);
+    let a=-Math.PI/2;
+    data.forEach((v,i)=>{
+      if(!(v>0))return;
+      const sw=(v/total)*Math.PI*2;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a+sw);ctx.closePath();
+      ctx.fillStyle=colors?colors[i%colors.length]:COLORS[i%COLORS.length];ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+      if(v/total>0.07){
+        const mx=a+sw/2,lx=cx+Math.cos(mx)*r*.65,ly=cy+Math.sin(mx)*r*.65;
+        ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText((v/total*100).toFixed(0)+'%',lx,ly);
+      }
+      a+=sw;
+    });
+    if(doughnut){
+      ctx.beginPath();ctx.arc(cx,cy,r*.42,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+    }
+    // Legend
+    const cw3=Math.floor(w/3);
+    labels.forEach((lbl,i)=>{
+      const col=colors?colors[i%colors.length]:COLORS[i%COLORS.length];
+      const lx=8+(i%3)*cw3, ly=chartH+10+Math.floor(i/3)*18;
+      ctx.fillStyle=col;ctx.fillRect(lx,ly,12,11);
+      ctx.fillStyle='#475569';ctx.font='10px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText((lbl||'').slice(0,18),lx+15,ly);
+    });
+  }
+
+  /* ----- VERTICAL BAR ----- */
+  function vbar(c,labels,data,colors,maxH){
+    if(!data||!data.length){empty(c,maxH);return;}
+    const p={l:52,r:8,t:14,b:52};
+    const{ctx,w,h}=sz(c,maxH);
+    const cw=w-p.l-p.r,ch=h-p.t-p.b;
+    const max=Math.max(...data.filter(isFinite),0)*1.1||1;
+    const n=labels.length,bw=Math.max(6,Math.floor(cw/n*.65));
+    const slot=cw/n;
+
+    // Y grid
+    for(let i=0;i<=5;i++){
+      const y=p.t+ch-ch*i/5,v=max*i/5;
+      ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
+      const lbl=v>=10000?(v/1000).toFixed(0)+'k':v>=1000?(v/1000).toFixed(1)+'k':v.toFixed(v<10?1:0);
+      ctx.fillText(lbl,p.l-4,y);
+      ctx.strokeStyle=i?'#f1f5f9':'#e2e8f0';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();
+    }
+    // Bars
+    data.forEach((v,i)=>{
+      const bh=((v||0)/max)*ch,bx=p.l+i*slot+(slot-bw)/2,by=p.t+ch-bh;
+      const col=Array.isArray(colors)?colors[i%colors.length]:(typeof colors==='string'?colors:COLORS[i%COLORS.length]);
+      ctx.fillStyle=col;
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(bx,by,bw,Math.max(1,bh),3);else ctx.rect(bx,by,bw,Math.max(1,bh));
+      ctx.fill();
+      // X label
+      ctx.fillStyle='#64748b';ctx.font='9.5px sans-serif';ctx.textAlign='center';
+      const lbl2=(labels[i]||'').slice(0,10);
+      ctx.save();ctx.translate(bx+bw/2,p.t+ch+4);ctx.rotate(-Math.PI/4);
+      ctx.textBaseline='top';ctx.fillText(lbl2,0,0);ctx.restore();
+    });
+  }
+
+  /* ----- HORIZONTAL BAR ----- */
+  function hbar(c,labels,data,colors,maxH){
+    if(!data||!data.length){empty(c,maxH);return;}
+    const p={l:108,r:56,t:8,b:8};
+    const{ctx,w,h}=sz(c,maxH);
+    const cw=w-p.l-p.r,ch=h-p.t-p.b;
+    const max=Math.max(...data.filter(isFinite),0)*1.1||1;
+    const n=labels.length,bh2=Math.max(6,Math.floor(ch/n*.65)),slot=ch/n;
+    ctx.strokeStyle='#e2e8f0';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l,p.t+ch);ctx.stroke();
+    data.forEach((v,i)=>{
+      const bw2=((v||0)/max)*cw,by=p.t+i*slot+(slot-bh2)/2;
+      const col=Array.isArray(colors)?colors[i%colors.length]:(typeof colors==='string'?colors:COLORS[i%COLORS.length]);
+      ctx.fillStyle=col;
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(p.l,by,Math.max(1,bw2),bh2,2);else ctx.rect(p.l,by,Math.max(1,bw2),bh2);
+      ctx.fill();
+      ctx.fillStyle='#475569';ctx.font='11px sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
+      ctx.fillText((labels[i]||'').slice(0,15),p.l-5,by+bh2/2);
+      ctx.fillStyle='#1e293b';ctx.textAlign='left';
+      const vlbl=v>=1000?(v/1000).toFixed(1)+'k':v.toFixed(0);
+      ctx.fillText(vlbl,p.l+bw2+4,by+bh2/2);
+    });
+  }
+
+  /* ----- LINE ----- */
+  function line(c,labels,data,color,bgColor,maxH){
+    if(!data||!data.length){empty(c,maxH);return;}
+    const p={l:52,r:8,t:14,b:46};
+    const{ctx,w,h}=sz(c,maxH);
+    const cw=w-p.l-p.r,ch=h-p.t-p.b;
+    const max=Math.max(...data.filter(isFinite),0)*1.05||1;
+    const n=labels.length;
+    const pts=data.map((v,i)=>({x:p.l+(n<2?cw/2:i/(n-1)*cw),y:p.t+ch-((v||0)/max)*ch}));
+    // Grid
+    for(let i=0;i<=4;i++){
+      const y=p.t+ch-ch*i/4,v=max*i/4;
+      ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
+      ctx.fillText(v>=1000?(v/1000).toFixed(1)+'k':v.toFixed(0),p.l-4,y);
+      ctx.strokeStyle=i?'#f1f5f9':'#e2e8f0';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();
+    }
+    // Fill
+    if(bgColor){
+      ctx.beginPath();ctx.moveTo(pts[0].x,p.t+ch);
+      pts.forEach(p2=>ctx.lineTo(p2.x,p2.y));ctx.lineTo(pts[n-1].x,p.t+ch);ctx.closePath();
+      ctx.fillStyle=bgColor;ctx.fill();
+    }
+    // Line
+    ctx.beginPath();ctx.strokeStyle=color||'#22c55e';ctx.lineWidth=2;ctx.lineJoin='round';
+    pts.forEach((p2,i)=>i?ctx.lineTo(p2.x,p2.y):ctx.moveTo(p2.x,p2.y));ctx.stroke();
+    // Points
+    pts.forEach(p2=>{ctx.beginPath();ctx.arc(p2.x,p2.y,3,0,Math.PI*2);ctx.fillStyle=color||'#22c55e';ctx.fill();});
+    // X labels
+    const step=Math.max(1,Math.floor(n/6));
+    ctx.fillStyle='#94a3b8';ctx.font='9px sans-serif';ctx.textBaseline='top';
+    pts.forEach((p2,i)=>{
+      if(i%step!==0)return;
+      ctx.save();ctx.translate(p2.x,p.t+ch+4);ctx.rotate(-Math.PI/4);ctx.textAlign='right';
+      ctx.fillText((labels[i]||'').slice(0,12),0,0);ctx.restore();
+    });
+  }
+
+  /* ----- STACKED BAR 100% ----- */
+  function stacked(c,labels,datasets,maxH){
+    if(!datasets||!datasets.length){empty(c,maxH);return;}
+    const legRows=Math.ceil(datasets.length/3),legH=legRows*16+8;
+    const p={l:42,r:8,t:14,b:52+legH};
+    const{ctx,w,h}=sz(c,maxH);
+    const cw=w-p.l-p.r,ch=h-p.t-p.b;
+    const n=labels.length,slot=cw/Math.max(1,n),bw2=Math.max(6,slot*.65);
+    // Grid
+    for(let i=0;i<=4;i++){
+      const y=p.t+ch-ch*i/4;
+      ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.textBaseline='middle';
+      ctx.fillText((i*25)+'%',p.l-3,y);
+      ctx.strokeStyle=i?'#f1f5f9':'#e2e8f0';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();
+    }
+    // Bars
+    labels.forEach((lbl,li)=>{
+      const bx=p.l+li*slot+(slot-bw2)/2;
+      let cumY=p.t+ch;
+      datasets.forEach(ds=>{
+        const v=ds.data[li]||0;if(v<=0)return;
+        const bh3=(v/100)*ch;cumY-=bh3;
+        ctx.fillStyle=ds.backgroundColor;
+        ctx.beginPath();ctx.rect(bx,cumY,bw2,bh3);ctx.fill();
+      });
+      ctx.fillStyle='#64748b';ctx.font='9px sans-serif';ctx.textAlign='center';
+      ctx.save();ctx.translate(bx+bw2/2,p.t+ch+4);ctx.rotate(-Math.PI/4);
+      ctx.textBaseline='top';ctx.fillText((lbl||'').slice(0,10),0,0);ctx.restore();
+    });
+    // Legend
+    const cw3=Math.floor(w/3);
+    datasets.forEach((ds,i)=>{
+      const lx=8+(i%3)*cw3, ly=h-legH+4+Math.floor(i/3)*16;
+      ctx.fillStyle=ds.backgroundColor;ctx.fillRect(lx,ly,11,11);
+      ctx.fillStyle='#475569';ctx.font='9.5px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText((ds.label||'').slice(0,18),lx+14,ly);
+    });
+  }
+
+  // Public API – mirrors the Chart.js config shape used in the app
+  return {
+    render(id,cfg){
+      const c=document.getElementById(id);
+      if(!c)return;
+      const type=cfg.type,data=cfg.data,opts=cfg.options||{};
+      const labels=data.labels||[],ds=data.datasets||[];
+      const maxH=250;
+      if(!labels.length||!ds.length){empty(c,maxH,'Sem dados');return;}
+      try{
+        if(type==='doughnut'||type==='pie'){
+          pie(c,labels,ds[0].data,ds[0].backgroundColor,type==='doughnut',maxH);
+        } else if(type==='bar'){
+          if(opts.indexAxis==='y'){
+            hbar(c,labels,ds[0].data,ds[0].backgroundColor,maxH);
+          } else if(ds.length>1){
+            stacked(c,labels,ds,maxH);
+          } else {
+            vbar(c,labels,ds[0].data,ds[0].backgroundColor,maxH);
+          }
+        } else if(type==='line'){
+          line(c,labels,ds[0].data,ds[0].borderColor,ds[0].backgroundColor,maxH);
+        } else {
+          empty(c,maxH,'Tipo: '+type);
+        }
+      } catch(e){console.error('MiniChart error',id,e);empty(c,maxH,'Erro: '+e.message);}
+    }
+  };
+})();
+</script>
+
+<script>
+/* ===== MiniXLSX — inline XLSX writer, zero external dependencies ===== */
+const MiniXLSX=(function(){
+  // CRC-32 table (standard ZIP polynomial)
+  const T=new Uint32Array(256);
+  for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);T[i]=c;}
+  function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=(c>>>8)^T[(c^u[i])&0xFF];return(c^0xFFFFFFFF)>>>0;}
+
+  const ENC=new TextEncoder();
+  const by=s=>ENC.encode(s);
+  const u16=(n)=>[n&0xFF,(n>>8)&0xFF];
+  const u32=(n)=>{n=n>>>0;return[n&0xFF,(n>>8)&0xFF,(n>>16)&0xFF,(n>>24)&0xFF];};
+  const xe=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  // Column index (0-based) → Excel letter (A, B, ..., Z, AA ...)
+  function col(n){let s='';n++;while(n>0){s=String.fromCharCode(64+(n%26||26))+s;n=Math.floor((n-(n%26?0:26))/26);}return s;}
+
+  function buildZip(files){
+    const entries=[];let offset=0;
+    for(const[name,raw]of Object.entries(files)){
+      const nb=by(name);
+      const cb=typeof raw==='string'?by(raw):raw;
+      const crc=crc32(cb);
+      const lh=new Uint8Array([
+        0x50,0x4B,0x03,0x04,20,0,0,0,0,0,0,0,0,0,
+        ...u32(crc),...u32(cb.length),...u32(cb.length),...u16(nb.length),0,0,...nb
+      ]);
+      entries.push({nb,cb,crc,offset,lh});
+      offset+=lh.length+cb.length;
+    }
+    const cdParts=entries.map(e=>new Uint8Array([
+      0x50,0x4B,0x01,0x02,20,0,20,0,0,0,0,0,0,0,0,0,
+      ...u32(e.crc),...u32(e.cb.length),...u32(e.cb.length),
+      ...u16(e.nb.length),0,0,0,0,0,0,0,0,0,0,0,0,...u32(e.offset),...e.nb
+    ]));
+    const cdLen=cdParts.reduce((s,p)=>s+p.length,0);
+    const eocd=new Uint8Array([
+      0x50,0x4B,0x05,0x06,0,0,0,0,
+      ...u16(entries.length),...u16(entries.length),...u32(cdLen),...u32(offset),0,0
+    ]);
+    const total=entries.reduce((s,e)=>s+e.lh.length+e.cb.length,0)+cdLen+eocd.length;
+    const out=new Uint8Array(total);let pos=0;
+    for(const e of entries){out.set(e.lh,pos);pos+=e.lh.length;out.set(e.cb,pos);pos+=e.cb.length;}
+    for(const p of cdParts){out.set(p,pos);pos+=p.length;}
+    out.set(eocd,pos);
+    return out;
+  }
+
+  return {
+    // sheets: [{name:string, rows:[[cell,...],...]}]
+    // Each cell: number → stored as number; anything else → stored as string
+    export(sheets,filename){
+      const strs=[],stridx={};
+      const si=v=>{const s=String(v??'');if(stridx[s]===undefined){stridx[s]=strs.length;strs.push(s);}return stridx[s];};
+
+      // Build worksheet XMLs (this also populates the shared-strings table)
+      const wsXMLs=sheets.map(sh=>{
+        let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+        x+='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+        (sh.rows||[]).forEach((row,ri)=>{
+          if(!row||!row.length)return;
+          let cells='';
+          row.forEach((cell,ci)=>{
+            const addr=col(ci)+(ri+1);
+            if(cell===null||cell===undefined||cell==='')return;
+            if(typeof cell==='number'&&isFinite(cell)&&!isNaN(cell)){
+              cells+=`<c r="${addr}"><v>${cell}</v></c>`;
+            } else {
+              cells+=`<c r="${addr}" t="s"><v>${si(cell)}</v></c>`;
+            }
+          });
+          if(cells)x+=`<row r="${ri+1}">${cells}</row>`;
+        });
+        x+='</sheetData></worksheet>';
+        return x;
+      });
+
+      const ns='http://schemas.openxmlformats.org/';
+      const files={};
+
+      // [Content_Types].xml
+      files['[Content_Types].xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        +'<Types xmlns="'+ns+'package/2006/content-types">'
+        +'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        +'<Default Extension="xml" ContentType="application/xml"/>'
+        +'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+        +'<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
+        +'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+        +sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')
+        +'</Types>';
+
+      // _rels/.rels
+      files['_rels/.rels']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        +'<Relationships xmlns="'+ns+'package/2006/relationships">'
+        +'<Relationship Id="rId1" Type="'+ns+'officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+        +'</Relationships>';
+
+      // xl/workbook.xml
+      files['xl/workbook.xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        +'<workbook xmlns="'+ns+'spreadsheetml/2006/main" xmlns:r="'+ns+'officeDocument/2006/relationships">'
+        +'<sheets>'+sheets.map((s,i)=>`<sheet name="${xe(s.name)}" sheetId="${i+1}" r:id="rId${i+2}"/>`).join('')+'</sheets>'
+        +'</workbook>';
+
+      // xl/_rels/workbook.xml.rels
+      files['xl/_rels/workbook.xml.rels']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        +'<Relationships xmlns="'+ns+'package/2006/relationships">'
+        +'<Relationship Id="rId1" Type="'+ns+'officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>'
+        +sheets.map((_,i)=>`<Relationship Id="rId${i+2}" Type="${ns}officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')
+        +'</Relationships>';
+
+      // xl/styles.xml (minimal)
+      files['xl/styles.xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        +'<styleSheet xmlns="'+ns+'spreadsheetml/2006/main">'
+        +'<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+        +'<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+        +'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+        +'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+        +'<cellXfs count="2">'
+        +'<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+        +'<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"/>'
+        +'</cellXfs></styleSheet>';
+
+      // Worksheets
+      wsXMLs.forEach((xml,i)=>{files[`xl/worksheets/sheet${i+1}.xml`]=xml;});
+
+      // xl/sharedStrings.xml
+      files['xl/sharedStrings.xml']='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        +'<sst xmlns="'+ns+'spreadsheetml/2006/main" count="'+strs.length+'" uniqueCount="'+strs.length+'">'
+        +strs.map(s=>`<si><t xml:space="preserve">${xe(s)}</t></si>`).join('')
+        +'</sst>';
+
+      // Download
+      try{
+        const blob=new Blob([buildZip(files)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+        setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},2000);
+      }catch(err){throw new Error('Falha ao gerar arquivo: '+err.message);}
+    }
+  };
+})();
+</script>
+<script>
+// ================================================================
+// GEOANALYZER PRO — Enterprise GIS Application
+// Full spatial analysis, raster clipping, and statistics engine
+// ================================================================
+
+const COLORS = ['#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#f97316','#ec4899','#06b6d4','#84cc16','#6366f1','#a855f7','#10b981','#eab308','#0ea5e9','#d946ef','#64748b','#fb923c','#34d399','#60a5fa'];
+
+const S = {
+  shps:[],rsts:[],results:[],advFilt:{},
+  page:'fm',map:null,mLayers:{},mRasterLayers:{},mLabelLayers:{},showLabels:true,charts:{},cData:{},
+  dtPage:1,sortKey:null,sortDir:'asc',
+  sizeShp:0,sizeRst:0,procDate:null
+};
+let shpCtr=0,rstCtr=0;
+let dtPage=1;
+
+const clr = v => COLORS[Math.abs(parseInt(v)||0)%COLORS.length];
+const fmtN = v => isNaN(v)?'—':parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtS = b => b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':b<1073741824?(b/1048576).toFixed(2)+' MB':(b/1073741824).toFixed(3)+' GB';
+
+// ========= NAVIGATION =========
+function nav(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('p-'+p)?.classList.add('active');
+  document.querySelectorAll('.sb-i').forEach(el=>el.classList.toggle('active',el.dataset.page===p));
+  ['fm','ins','dt'].forEach(t=>{const el=document.getElementById('tt-'+t);if(el)el.classList.toggle('active',t===p)});
+  S.page=p;
+  if(typeof setCrumb==='function')setCrumb(p);
+  if(typeof toggleSidebar==='function')toggleSidebar(false);
+  if(p==='map'){
+    // The map container only has a size once the page is displayed, so init/measure on the next frame
+    requestAnimationFrame(()=>{
+      if(!S.map)initMap();
+      else{S.map.invalidateSize();setTimeout(()=>S.map&&S.map.invalidateSize(),200);}
+      setTimeout(()=>{ updRasterLayersPanel(); if(S.results.length)buildLegend(S.results); },100);
+    });
+  }
+  if(p==='ins'){
+    // Small delay so browser paints the page before we measure canvas dims
+    setTimeout(()=>{
+      updInsFilts();
+      updCharts();
+      S._chartsDirty=false;
+    }, 60);
+  }
+  if(p==='dt'){requestAnimationFrame(()=>renderDT());}
+}
+
+function newProject(){toast('Novo projeto criado','s')}
+
+// ========= TOAST =========
+function toast(msg,type='i'){
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;el.textContent=msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),4000);
+}
+
+// ========= LOG =========
+function lg(msg,t=''){
+  const b=document.getElementById('proc-log');
+  const d=document.createElement('div');
+  d.className=t?'l'+t:'';
+  d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  b.appendChild(d);b.scrollTop=b.scrollHeight;
+}
+function clrLog(){document.getElementById('proc-log').innerHTML='<span class="ld">— Log cleared —</span>'}
+
+// ========= SHAPEFILE MANAGEMENT =========
+function addShp(){
+  const id='shp-'+(++shpCtr);
+  S.shps.push({id,name:'',geojson:null,attrs:[],attr:'',crs:'',status:'idle',prog:0,size:0});
+  renderShps();
+}
+function rmShp(id){
+  S.shps=S.shps.filter(s=>s.id!==id);
+  renderShps();updStorage();updMapLayers();
+}
+function renderShps(){
+  const c=document.getElementById('shp-list');
+  if(!S.shps.length){c.innerHTML='<div class="empty" style="padding:16px"><p>Clique em "+ Adicionar Shapefile" para começar.</p></div>';return}
+  c.innerHTML=S.shps.map(s=>`
+    <div class="fe" id="fe-${s.id}">
+      <div class="fe-top fe-shp">
+        <div>
+          <label class="fl">Legenda/Nome do Arquivo</label>
+          <input class="inp" type="text" placeholder="Ex: Urban_Planning_2024" value="${s.name}" oninput="updShpName('${s.id}',this.value)">
+        </div>
+        <div>
+          <label class="fl">Selecionar Atributo da Tabela</label>
+          <select class="sel" onchange="updShpAttr('${s.id}',this.value)" ${!s.attrs.length?'disabled':''}>
+            <option value="">— Selecionar —</option>
+            ${s.attrs.map(a=>`<option value="${a}" ${a===s.attr?'selected':''}>${a}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="fe-bot">
+        <label class="up-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+          ${s._fname||'Selecionar .zip ou .shp+.dbf'}
+          <input type="file" multiple accept=".zip,.shp,.dbf,.prj,.shx" onchange="handleShp('${s.id}',this)">
+        </label>
+        ${s.status==='uploading'?`<div class="pw"><div class="pb" style="width:${s.prog}%"></div></div><span class="pl">${s.prog}%</span>`:''}
+        ${s.size>0?`<span class="fe-meta">SHP | ${fmtS(s.size)}</span>`:''}
+        ${s.status==='processed'?`<span class="badge bg">PROCESSED</span>`:''}
+        ${s.status==='error'?`<span class="badge br">ERROR</span>`:''}
+        ${s.crs?`<span class="fe-meta" title="${s.crs}" style="cursor:help">${s.crs.split(' ')[0]}</span>`:''}
+        <button class="btn btn-del btn-sm" onclick="rmShp('${s.id}')" style="margin-left:auto">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+          Delete
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+function updShpName(id,v){const s=S.shps.find(x=>x.id===id);if(s){s.name=v;document.getElementById('prev-name').textContent=v||'No data loaded'}}
+function updShpAttr(id,v){const s=S.shps.find(x=>x.id===id);if(s)s.attr=v}
+function updateNumRasters(){
+  const n=Math.max(1,Math.min(20,parseInt(document.getElementById('num-rst').value)||1));
+  document.getElementById('num-rst').value=n;
+  while(S.rsts.length<n)addRst();
+  while(S.rsts.length>n){
+    const last=S.rsts[S.rsts.length-1];
+    if(last.status==='idle'){S.rsts.pop();}else break;
+  }
+  renderRsts();
+  toast(`${S.rsts.length} slot(s) de raster configurados`,'i');
+}
+function updateNumShapes(){
+  const n=Math.max(1,Math.min(20,parseInt(document.getElementById('num-shp').value)||1));
+  document.getElementById('num-shp').value=n;
+  // Add slots up to n
+  while(S.shps.length<n)addShp();
+  // Remove empty slots above n (never remove loaded data)
+  while(S.shps.length>n){
+    const last=S.shps[S.shps.length-1];
+    if(last.status==='idle'){S.shps.pop();}else break;
+  }
+  renderShps();
+  toast(`${S.shps.length} slot(s) de shapefile configurados`,'i');
+}
+
+
+// ── Read ALL field names directly from DBF binary header ──────────────────
+// This is the single source of truth – bypasses shpjs property handling
+function parseDBFFieldNames(buf){
+  try{
+    const ab = buf instanceof ArrayBuffer ? buf
+      : (buf.buffer ? buf.buffer.slice(buf.byteOffset, buf.byteOffset+buf.byteLength) : null);
+    if(!ab || ab.byteLength < 32) return [];
+    const v = new DataView(ab);
+    const hdrSz = v.getUint16(8, true);   // bytes 8-9: header size in bytes
+    const fields = [];
+    let off = 32;                           // field descriptors start at byte 32
+    while(off + 32 <= Math.min(ab.byteLength, hdrSz)){
+      const term = v.getUint8(off);
+      if(term === 0x0D || term === 0x00) break; // header terminator
+      // Field name: first 11 bytes, null-padded
+      let name = '';
+      for(let i = 0; i < 11; i++){
+        const b = v.getUint8(off + i);
+        if(b === 0x00 || b === 0x0D) break;
+        name += String.fromCharCode(b);
+      }
+      name = name.trim();
+      if(name.length > 0) fields.push(name);
+      off += 32;
+    }
+    return fields;
+  } catch(e){ lg('DBF parse: '+e.message,'w'); return []; }
+}
+
+// ── Extract a file by extension from a ZIP ArrayBuffer ────────────────────
+// Supports STORE (method 0) and DEFLATE (method 8) via DecompressionStream
+async function extractFileFromZip(zipBuf, targetExt){
+  try{
+    const u8  = new Uint8Array(zipBuf);
+    const v   = new DataView(zipBuf);
+    let off   = 0;
+    const ext = targetExt.toLowerCase();
+    while(off < u8.length - 30){
+      if(v.getUint32(off, true) !== 0x04034B50){ off++; continue; }
+      const method   = v.getUint16(off + 8,  true);
+      const compSz   = v.getUint32(off + 18, true);
+      const nameLen  = v.getUint16(off + 26, true);
+      const extraLen = v.getUint16(off + 28, true);
+      const name     = new TextDecoder().decode(u8.slice(off+30, off+30+nameLen));
+      const dataOff  = off + 30 + nameLen + extraLen;
+      if(name.toLowerCase().endsWith(ext)){
+        const compData = zipBuf.slice(dataOff, dataOff + compSz);
+        if(method === 0){
+          return compData;           // STORE – no compression
+        }
+        if(method === 8 && typeof DecompressionStream !== 'undefined'){
+          // DEFLATE – use native browser API
+          const ds = new DecompressionStream('deflate-raw');
+          const writer = ds.writable.getWriter();
+          const reader = ds.readable.getReader();
+          writer.write(new Uint8Array(compData));
+          writer.close();
+          const chunks = [];
+          while(true){
+            const {done, value} = await reader.read();
+            if(done) break;
+            chunks.push(value);
+          }
+          const tot = chunks.reduce((s,c)=>s+c.length,0);
+          const out = new Uint8Array(tot); let pos=0;
+          for(const ch of chunks){ out.set(ch,pos); pos+=ch.length; }
+          return out.buffer;
+        }
+      }
+      off = dataOff + compSz;
+    }
+  } catch(e){ lg('ZIP extract: '+e.message,'w'); }
+  return null;
+}
+
+// ── Get ALL attribute names for a shapefile upload ────────────────────────
+// Strategy: DBF binary (most reliable) → GeoJSON properties (fallback)
+async function getShapefileAttrs(geojson, zipBuf, dbfBuf){
+  let names = [];
+  // 1) Try DBF from ZIP
+  if(!names.length && zipBuf){
+    try{
+      const dbfAB = await extractFileFromZip(zipBuf, '.dbf');
+      if(dbfAB) names = parseDBFFieldNames(dbfAB);
+    } catch(e){}
+  }
+  // 2) Try directly-provided DBF buffer
+  if(!names.length && dbfBuf){
+    try{ names = parseDBFFieldNames(dbfBuf); } catch(e){}
+  }
+  // 3) Fallback: GeoJSON properties (collect from ALL features)
+  if(!names.length && geojson && geojson.features){
+    const set = new Set();
+    geojson.features.forEach(f=>{
+      Object.keys(f.properties||{}).forEach(k=>{
+        // Only exclude true shpjs internals (double-underscore prefix)
+        if(k && typeof k==='string' && !k.startsWith('__')) set.add(k);
+      });
+    });
+    names = [...set];
+  }
+  // 4) Filter ONLY truly internal keys (__ prefix), keep everything else
+  return names.filter(k => k && !k.startsWith('__'));
+}
+
+async function handleShp(id,inp){
+  const s=S.shps.find(x=>x.id===id);
+  if(!s||!inp.files.length)return;
+  s.status='uploading';s.prog=10;
+  const fname=inp.files[0].name;s._fname=fname;
+  renderShps();lg(`Carregando shapefile: ${fname}`,'i');
+  try{
+    let geojson,prj='',sz=0,_dbfBuf=null;
+    for(const f of inp.files)sz+=f.size;
+    const prog=setInterval(()=>{if(s.prog<80){s.prog+=10;renderShps()}},200);
+    if(inp.files.length===1&&fname.toLowerCase().endsWith('.zip')){
+      const buf=await inp.files[0].arrayBuffer();
+      const res=await shp(buf);
+      geojson=Array.isArray(res)?res[0]:res;
+    } else {
+      let sb=null,db=null;
+      for(const f of inp.files){
+        const ext=f.name.toLowerCase().split('.').pop();
+        if(ext==='shp')sb=await f.arrayBuffer();
+        else if(ext==='dbf')db=await f.arrayBuffer();
+        else if(ext==='prj')prj=await f.text();
+      }
+      if(!sb)throw new Error('Arquivo .shp não encontrado');
+      if(!db)throw new Error('Arquivo .dbf não encontrado. Selecione .shp+.dbf+.prj juntos ou use .zip');
+      _dbfBuf=db;  // keep for direct DBF field name parsing
+      geojson=shp.combine([shp.parseShp(sb,prj),shp.parseDbf(db)]);
+    }
+    clearInterval(prog);s.prog=85;renderShps();
+    if(!geojson||!geojson.features)throw new Error('GeoJSON inválido');
+    const {crsInfo,reprojected}=await detectReproject(geojson,prj);
+    // ── Attribute extraction: DBF binary → GeoJSON fallback ──────────────
+    // Pass both the zip buffer (if zip upload) and the dbf buffer (if individual files)
+    const attrs = await getShapefileAttrs(
+      reprojected,
+      (inp.files.length===1 && inp.files[0].name.toLowerCase().endsWith('.zip'))
+        ? await inp.files[0].arrayBuffer()
+        : null,
+      _dbfBuf  // set earlier if individual files were uploaded
+    );
+    lg(`Atributos encontrados (${attrs.length}): ${attrs.join(', ')||'nenhum'}`, attrs.length?'s':'w');
+    s.geojson=reprojected;s.attrs=attrs;s.attr=attrs[0]||'';
+    s.crs=crsInfo;s.size=sz;s.status='processed';s.prog=100;
+    S.sizeShp+=sz;
+    if(!s.name)s.name=fname.replace(/\.[^.]+$/,'');
+    lg(`✓ Shapefile carregado: ${s.name} — ${reprojected.features.length} features, ${attrs.length} atributos`,'s');
+    toast(`✓ ${s.name}: ${reprojected.features.length} features carregadas`,'s');
+    renderShps();updStorage();updPrev(s);
+    addShpToMap(s);updMapFilters();
+  } catch(err){
+    s.status='error';s.prog=0;
+    lg(`✗ Erro shapefile: ${err.message}`,'e');
+    toast(`Erro: ${err.message}`,'e');
+    renderShps();
+  }
+}
+
+// ========= RASTER MANAGEMENT =========
+function addRst(){
+  const id='rst-'+(++rstCtr);
+  S.rsts.push({id,name:'',file:null,tiff:null,img:null,meta:{},status:'idle',prog:0,size:0});
+  renderRsts();
+}
+function rmRst(id){S.rsts=S.rsts.filter(r=>r.id!==id);renderRsts();updStorage()}
+function renderRsts(){
+  const c=document.getElementById('rst-list');
+  if(!S.rsts.length){c.innerHTML='<div class="empty" style="padding:16px"><p>Clique em "+ Adicionar Raster" para começar.</p></div>';return}
+  c.innerHTML=S.rsts.map(r=>`
+    <div class="fe" id="fe-${r.id}">
+      <div class="fe-top fe-rst">
+        <div>
+          <label class="fl">Legenda/Nome do Arquivo</label>
+          <input class="inp" type="text" placeholder="Ex: LULC_2024" value="${r.name}" oninput="updRstName('${r.id}',this.value)">
+        </div>
+      </div>
+      <div class="fe-bot">
+        <label class="up-btn">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"/></svg>
+          ${r._fname||'Selecionar .tif / .tiff'}
+          <input type="file" accept=".tif,.tiff,.geotiff" onchange="handleRst('${r.id}',this)">
+        </label>
+        ${r.status==='uploading'?`<div class="pw"><div class="pb" style="width:${r.prog}%;background:var(--blu)"></div></div><span class="pl">${r.prog}%</span>`:''}
+        ${r.size>0?`<span class="fe-meta">${r.meta.fmt||'TIF'} | ${fmtS(r.size)} | ${r.meta.w||0}×${r.meta.h||0}px</span>`:''}
+        ${r.status==='processed'?`<span class="badge bo">RASTER LOADED</span><svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="var(--acc)" style="width:16px;height:16px"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>`:''}
+        ${r.status==='error'?`<span class="badge br">ERROR</span>`:''}
+        <button class="btn btn-del btn-sm" onclick="rmRst('${r.id}')" style="margin-left:auto">
+          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+          Delete
+        </button>
+      </div>
+      ${r.status==='processed'&&r.uniqueValues&&r.uniqueValues.length?`
+        <div style="margin-top:12px;border-top:1px solid var(--brd);padding-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)">
+              Dicionário de Classes (${r.uniqueValues.length} valores)
+            </span>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <button class="btn btn-o btn-sm" style="font-size:11px;padding:3px 8px"
+                onclick="importDictTxt('${r.id}')" title="Importar .txt ou .csv com formato: valor,label">
+                📂 Carregar TXT/CSV
+              </button>
+              <button class="btn btn-g btn-sm" style="font-size:11px;padding:3px 8px"
+                onclick="saveDict('${r.id}')" title="Salvar dicionário como arquivo TXT">
+                💾 Salvar Dicionário
+              </button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:auto 14px 1fr;gap:4px 8px;align-items:center">
+            <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase">Valor</span>
+            <span></span>
+            <span style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase">Label / Descrição</span>
+            ${r.uniqueValues.map(v=>`
+              <span style="font-family:monospace;font-size:12px;font-weight:700;color:var(--txt);padding:2px 6px;background:var(--bg);border-radius:4px;text-align:center">${v}</span>
+              <span style="width:14px;height:14px;border-radius:3px;background:${clsColor(v)};display:inline-block;flex-shrink:0"></span>
+              <input class="inp" type="text" style="padding:4px 8px;font-size:12px"
+                placeholder="Ex: Floresta Nativa, Savana, Solo Exposto…"
+                value="${(r.dict&&r.dict[v])||''}"
+                oninput="updDictLabel('${r.id}',${v},this.value)">
+            `).join('')}
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--t3);background:var(--bg);padding:6px 8px;border-radius:6px">
+            💡 Labels usados em tabelas, gráficos, mapa e XLSX.<br>
+            Formato do arquivo: uma linha por classe →  <code style="font-size:10px;background:#e2e8f0;padding:1px 4px;border-radius:3px">4,Savana</code> &nbsp; ou &nbsp; <code style="font-size:10px;background:#e2e8f0;padding:1px 4px;border-radius:3px">4;Savana</code>
+          </div>
+        </div>
+      `:''}
+    </div>
+  `).join('');
+}
+
+// ══ Dictionary helpers ════════════════════════════════════════════════════
+
+// Primary label resolver: tries raster dict → falls back to "Cl. N"
+function clsLabel(rasterId, value){
+  const rst=S.rsts.find(r=>r.id===rasterId);
+  if(rst&&rst.dict&&rst.dict[value]&&String(rst.dict[value]).trim())
+    return String(rst.dict[value]).trim();
+  return `Cl. ${value}`;
+}
+
+// Update a single dict entry and refresh all dependent views
+function updDictLabel(rstId, value, label){
+  const r=S.rsts.find(x=>x.id===rstId);
+  if(!r)return;
+  if(!r.dict)r.dict={};
+  r.dict[value]=label;
+  // Refresh dependent panels without re-rendering files (avoid losing focus)
+  if(S.page==='dt')renderDT();
+  if(S.page==='ins'){S._chartsDirty=true;}
+  // Refresh map legend if open
+  if(S.page==='map'&&S.results.length)buildLegend(S.results);
+}
+
+// Export dictionary as CSV
+// Save dictionary as TXT file (valor,label — one per line)
+function saveDict(rstId){
+  const r=S.rsts.find(x=>x.id===rstId);
+  if(!r||!r.dict){toast('Dicionário vazio','e');return;}
+  const vals=r.uniqueValues&&r.uniqueValues.length
+    ? r.uniqueValues
+    : Object.keys(r.dict).map(Number).sort((a,b)=>a-b);
+  // Header + rows
+  const lines=['valor,label',...vals.map(v=>`${v},${(r.dict[v]||'').replace(/,/g,';')}`)];
+  const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${(r.name||'raster').replace(/\s+/g,'_')}_dicionario.txt`;
+  a.click();
+  toast(`✓ Dicionário salvo: ${(r.name||'raster')}_dicionario.txt`,'s');
+}
+
+// Import dictionary from TXT or CSV
+// Accepts separators: comma (,), semicolon (;), tab, pipe (|)
+// Accepts with or without header line (auto-detected)
+// Accepts formats: "4,Savana" / "4;Savana" / "4 Savana" (if only 2 tokens)
+function importDictTxt(rstId){
+  const r=S.rsts.find(x=>x.id===rstId);
+  if(!r)return;
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.csv,.txt,.tsv';
+  inp.onchange=async()=>{
+    const file=inp.files[0];if(!file)return;
+    const raw=await file.text();
+    const lines=raw.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+    if(!lines.length){toast('Arquivo vazio','e');return;}
+    if(!r.dict)r.dict={};
+    let count=0,skipped=0,startLine=0;
+    // Auto-detect header: if first token of first line is not a number → skip it
+    const firstTok=lines[0].split(/[,;\t|]/)[0].trim();
+    if(isNaN(parseInt(firstTok)))startLine=1;
+    for(let i=startLine;i<lines.length;i++){
+      const line=lines[i];
+      if(!line)continue;
+      // Try separator detection: prefer first of , ; \t | that splits into ≥2 parts
+      let sep=',';
+      for(const s of [',',';','\t','|']){
+        if(line.includes(s)){sep=s;break;}
+      }
+      let parts=line.split(sep);
+      // If still only 1 part, try splitting on first space
+      if(parts.length<2){
+        const spaceIdx=line.search(/\s+/);
+        if(spaceIdx>0)parts=[line.slice(0,spaceIdx),line.slice(spaceIdx).trim()];
+      }
+      if(parts.length<2){skipped++;continue;}
+      const valStr=parts[0].trim().replace(/^["']|["']$/g,'');
+      const val=parseInt(valStr);
+      if(isNaN(val)){skipped++;continue;}
+      const lbl=parts.slice(1).join(sep)
+        .replace(/^["'\s]+|["'\s]+$/g,'')
+        .replace(/""/g,'"').trim();
+      r.dict[val]=lbl;
+      // If this value wasn't in uniqueValues, add it
+      if(r.uniqueValues&&!r.uniqueValues.includes(val)){
+        r.uniqueValues.push(val);
+        r.uniqueValues.sort((a,b)=>a-b);
+      }
+      count++;
+    }
+    renderRsts();
+    if(S.page==='dt')renderDT();
+    if(S.page==='ins'){S._chartsDirty=true;}
+    if(S.page==='map'&&S.results.length)buildLegend(S.results);
+    const msg=skipped?` (${skipped} linha(s) ignorada(s))`:'';
+    toast(`✓ ${count} label(s) carregado(s) para "${r.name}"${msg}`,'s');
+  };
+  inp.click();
+}
+
+
+// Resolve label for a class value from a dataset (d = array of results)
+// Used by charts which may span multiple rasters
+function clsLabelFromResults(d, value){
+  // Find first result with this class and get its raster dict
+  const r=d.find(x=>x.classes.some(c=>c.value===value));
+  if(r)return clsLabel(r.rasterId,value);
+  return `Cl. ${value}`;
+}
+
+// Same but for XLSX (avoid special chars in column headers)
+function clsLabelForXLSX(value, results){
+  const lbl=clsLabelFromResults(results||S.results,value);
+  return lbl.replace(/[^\w\s\-\.]/g,'').slice(0,20)||`Cls_${value}`;
+}
+
+function updRstName(id,v){const r=S.rsts.find(x=>x.id===id);if(r)r.name=v}
+
+async function handleRst(id,inp){
+  const r=S.rsts.find(x=>x.id===id);
+  if(!r||!inp.files.length)return;
+  const file=inp.files[0];
+  r.status='uploading';r.prog=10;r._fname=file.name;r.file=file;
+  renderRsts();lg(`Carregando raster: ${file.name}`,'i');
+  try{
+    const prog=setInterval(()=>{if(r.prog<80){r.prog+=15;renderRsts()}},300);
+    const buf=await file.arrayBuffer();
+    const tiff=await GeoTIFF.fromArrayBuffer(buf);
+    const img=await tiff.getImage();
+    clearInterval(prog);r.prog=90;
+    const bbox=img.getBoundingBox();
+    const w=img.getWidth(),h=img.getHeight();
+    const gk=img.getGeoKeys();
+    const epsg=gk.ProjectedCSTypeGeoKey||gk.GeographicTypeGeoKey||0;
+    const mt=gk.GTModelTypeGeoKey;
+    // GTModelTypeGeoKey: 1=Projected, 2=Geographic, 3=Geocentric
+    // If modelType is explicitly 1 → projected; 2 → geographic; 0/undefined → guess from EPSG
+    const isGeo = (mt===2) ||
+      (mt!==1 && (epsg===4326||epsg===4674||epsg===4618||epsg===0))||(mt!==1&&epsg>=4000&&epsg<5000);
+    let noData=null;
+    try{
+      // Method 1: GDAL_NODATA tag (most common)
+      const fd=img.fileDirectory;
+      let nd=null;
+      if(fd.GDAL_NODATA!==undefined&&fd.GDAL_NODATA!==null)nd=fd.GDAL_NODATA;
+      else if(fd[42113]!==undefined)nd=fd[42113];       // tag number fallback
+      if(nd!==null&&nd!==undefined&&String(nd).trim()!==''){
+        const parsed=parseFloat(String(nd).trim());
+        if(!isNaN(parsed))noData=parsed;
+      }
+    }catch(e){}
+    // Method 2: dtype-based default noData (int8 standard fill = -128)
+    try{
+      if(noData===null){
+        const sf=img.fileDirectory.SampleFormat||[1];
+        const bps=img.fileDirectory.BitsPerSample||[8];
+        const fmt=Array.isArray(sf)?sf[0]:sf;
+        const bits=Array.isArray(bps)?bps[0]:bps;
+        if(fmt===2&&bits===8)noData=-128;   // Int8 standard fill
+        else if(fmt===2&&bits===16)noData=-32768; // Int16
+      }
+    }catch(e){}
+    r.tiff=tiff;r.img=img;r.size=file.size;
+    r.meta={w,h,bbox,epsg,isGeo,fmt:file.name.split('.').pop().toUpperCase(),
+      xRes:(bbox[2]-bbox[0])/w,yRes:(bbox[3]-bbox[1])/h,noData};
+    // ── Read ALL pixels to find every unique value in the raster ──
+    try{
+      lg(`Lendo todos os pixels de ${file.name} para detectar classes...`,'i');
+      // Read full raster in tiles to avoid single huge allocation blocking the UI
+      const TILE = 512;            // tile height in rows
+      const uvals = new Set();
+      for(let row=0; row<h; row+=TILE){
+        const rh = Math.min(TILE, h-row);
+        const rd = await img.readRasters({window:[0, row, w, row+rh]});
+        const band = rd[0];
+        for(let i=0; i<band.length; i++){
+          const v = band[i];
+          if(v!=null && !isNaN(v) && isFinite(v) &&
+             (noData===null || Math.abs(v-noData)>0.001) &&
+             v>-1e10 && v<1e10){
+            uvals.add(Math.round(Number(v)));
+          }
+        }
+        // Yield to UI between tiles so page stays responsive
+        await new Promise(res=>setTimeout(res,0));
+      }
+      r.uniqueValues=[...uvals].sort((a,b)=>a-b);
+      // Init dict: keep existing labels, add slots for new values
+      if(!r.dict)r.dict={};
+      r.uniqueValues.forEach(v=>{ if(!(v in r.dict)) r.dict[v]=''; });
+      lg(`✓ Valores únicos em ${file.name} (${w}×${h} px completo): ${r.uniqueValues.join(', ')}`,'s');
+    }catch(e){r.uniqueValues=[];r.dict={};lg('Warn leitura completa: '+e.message,'w');}
+    r.status='processed';r.prog=100;
+    S.sizeRst+=file.size;
+    if(!r.name)r.name=file.name.replace(/\.[^.]+$/,'');
+    lg(`✓ Raster carregado: ${r.name} — ${w}×${h}px, EPSG:${epsg||'?'}, noData:${noData}`,'s');
+    toast(`✓ ${r.name}: ${w}×${h}px carregado`,'s');
+    renderRsts();updStorage();
+  } catch(err){
+    r.status='error';r.prog=0;
+    lg(`✗ Erro raster: ${err.message}`,'e');
+    toast(`Erro raster: ${err.message}`,'e');
+    renderRsts();
+  }
+}
+
+// ========= CRS DETECTION & REPROJECTION =========
+async function detectReproject(gj,prj){
+  let isGeo=false,crsInfo='Desconhecido';
+  if(prj){
+    const hasProj=(/PROJCS/i).test(prj);
+    const hasGeo=(/GEOGCS/i).test(prj);
+    if(hasGeo&&!hasProj)isGeo=true;
+    if(/SIRGAS_2000|GCS_SIRGAS/i.test(prj)){crsInfo='SIRGAS 2000 Geographic';isGeo=true}
+    else if(/WGS_1984|WGS 84|GCS_WGS/i.test(prj)&&!hasProj){crsInfo='WGS84 Geographic';isGeo=true}
+    else if(hasProj){crsInfo='Projetado (PRJ)';isGeo=false}
+  }
+  if(!prj||crsInfo==='Desconhecido'){
+    const c=gj.features.length?getFirstCoord(gj.features[0].geometry):null;
+    if(c){
+      if(Math.abs(c[0])<=180&&Math.abs(c[1])<=90){isGeo=true;crsInfo='WGS84 (detectado por coordenadas)'}
+      else{isGeo=false;crsInfo='Projetado (detectado por coordenadas)'}
+    }
+  }
+  if(!isGeo){return{crsInfo,reprojected:{...gj}};}
+  try{
+    const ctr=getCentroid(gj);
+    const zone=Math.floor((ctr[0]+180)/6)+1;
+    const isSouth=ctr[1]<0;
+    const epsgNum=31960+zone;
+    const projDef=`+proj=utm +zone=${zone} ${isSouth?'+south':''} +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs`;
+    proj4.defs('EPSG:4326','+proj=longlat +datum=WGS84 +no_defs');
+    proj4.defs(`EPSG:${epsgNum}`,projDef);
+    crsInfo=`SIRGAS 2000 UTM Zone ${zone}${isSouth?'S':'N'} (EPSG:${epsgNum})`;
+    lg(`CRS geográfico → reprojetando para ${crsInfo}`,'w');
+    const feats=gj.features.map(f=>{
+      const wgs84=JSON.parse(JSON.stringify(f.geometry));
+      const utm=reproj(f.geometry,'EPSG:4326',`EPSG:${epsgNum}`);
+      return{...f,geometry:utm,_wgs84:wgs84};
+    });
+    return{crsInfo,reprojected:{...gj,features:feats,_epsg:epsgNum,_zone:zone,_south:isSouth,_isGeoInput:true}};
+  } catch(e){
+    lg(`Warn: reproj falhou (${e.message}) — usando geom original`,'w');
+    return{crsInfo:'WGS84 (sem reprojeção)',reprojected:{...gj}};
+  }
+}
+
+function reproj(geom,from,to){
+  try{
+    const c=coord=>{try{return proj4(from,to,coord.slice(0,2))}catch(e){return coord}};
+    if(!geom||!geom.type)return geom;
+    if(geom.type==='Point')return{...geom,coordinates:c(geom.coordinates)};
+    if(geom.type==='MultiPoint'||geom.type==='LineString')return{...geom,coordinates:geom.coordinates.map(c)};
+    if(geom.type==='MultiLineString'||geom.type==='Polygon')return{...geom,coordinates:geom.coordinates.map(r=>r.map(c))};
+    if(geom.type==='MultiPolygon')return{...geom,coordinates:geom.coordinates.map(p=>p.map(r=>r.map(c)))};
+  } catch(e){}
+  return geom;
+}
+
+function getFirstCoord(geom){
+  if(!geom)return null;
+  if(geom.type==='Point')return geom.coordinates;
+  const s=JSON.stringify(geom.coordinates||[]);
+  const m=s.match(/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+  return m?[parseFloat(m[1]),parseFloat(m[2])]:null;
+}
+
+function getCentroid(gj){
+  // No turf needed — iterate all coordinates and average
+  let sx=0,sy=0,n=0;
+  function visit(c){
+    if(!c||!c.length)return;
+    if(typeof c[0]==='number'){sx+=c[0];sy+=c[1];n++;}
+    else c.forEach(visit);
+  }
+  const feats=gj.features||[gj];
+  feats.forEach(f=>{const g=f.geometry||f;visit(g.coordinates||[]);});
+  return n>0?[sx/n,sy/n]:[0,0];
+}
+
+// Custom bbox — no external dependency
+function getBBox(geojson){
+  const geom=geojson.geometry||geojson;
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  function visit(c){
+    if(!c||!c.length)return;
+    if(typeof c[0]==='number'){
+      if(c[0]<x0)x0=c[0];if(c[0]>x1)x1=c[0];
+      if(c[1]<y0)y0=c[1];if(c[1]>y1)y1=c[1];
+    } else c.forEach(visit);
+  }
+  visit(geom.coordinates||[]);
+  return[x0,y0,x1,y1];
+}
+
+function toWGS84(feature,shpEntry){
+  if(feature._wgs84)return{...feature,geometry:feature._wgs84};
+  const epsg=shpEntry?.geojson?._epsg;
+  if(epsg){
+    try{
+      proj4.defs('EPSG:4326','+proj=longlat +datum=WGS84 +no_defs');
+      const zone=shpEntry.geojson._zone,south=shpEntry.geojson._south;
+      const def=`+proj=utm +zone=${zone} ${south?'+south':''} +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs`;
+      if(!proj4.defs(`EPSG:${epsg}`))proj4.defs(`EPSG:${epsg}`,def);
+      return{...feature,geometry:reproj(feature.geometry,`EPSG:${epsg}`,'EPSG:4326')};
+    } catch(e){}
+  }
+  return feature;
+}
+
+// ========= PROCESSING =========
+async function runProcessing(){
+  const vs=S.shps.filter(s=>s.geojson&&s.status==='processed');
+  const vr=S.rsts.filter(r=>r.img&&r.status==='processed');
+  if(!vs.length){toast('Adicione e carregue pelo menos um shapefile','e');return}
+  if(!vr.length){toast('Adicione e carregue pelo menos um raster','e');return}
+  document.getElementById('run-btn').disabled=true;
+  S.results=[];nav('proc');
+  const total=vs.reduce((s,shp)=>s+shp.geojson.features.length*vr.length,0);
+  let done=0;
+  document.getElementById('pc-shp').textContent=vs.length;
+  document.getElementById('pc-rst').textContent=vr.length;
+  document.getElementById('pc-cmb').textContent=total;
+  document.getElementById('pc-done').textContent='0';
+  document.getElementById('proc-sum').style.display='none';
+  renderProcItems(vs,vr);
+  lg(`Iniciando processamento: ${vs.length} shape(s) × ${vr.length} raster(s) = ${total} combinações`,'i');
+  const t0=Date.now();
+  for(const shp of vs){
+    for(const rst of vr){
+      const key=shp.id+'-'+rst.id;
+      lg(`Processando: ${shp.name} × ${rst.name}`,'i');
+      setProcItem(key,0,'Processando...',true);
+      try{
+        const rows=await procPair(shp,rst,(fi,tot,pct)=>{
+          const ov=Math.round((done/total+(fi/tot)/total)*100);
+          setGP(ov,`${shp.name} × ${rst.name} (${fi}/${tot})`);
+          setProcItem(key,pct,'Processando...',true);
+        });
+        S.results.push(...rows);
+        done++;
+        document.getElementById('pc-done').textContent=done;
+        setGP(Math.round(done/total*100),`✓ ${shp.name} × ${rst.name}`);
+        setProcItem(key,100,'✓ Concluído',false,true);
+        lg(`✓ ${shp.name} × ${rst.name}: ${rows.length} registros`,'s');
+      } catch(err){
+        setProcItem(key,0,'✗ Erro',false,false,true);
+        lg(`✗ Erro: ${shp.name} × ${rst.name}: ${err.message}`,'e');
+      }
+    }
+  }
+  const el=((Date.now()-t0)/1000).toFixed(1);
+  setGP(100,'✅ Processamento concluído!');
+  lg(`✓ Concluído em ${el}s — ${S.results.length} registros gerados`,'s');
+  S.procDate=new Date();
+  document.getElementById('run-btn').disabled=false;
+  showProcSum();updDTFilts();updInsFilts();updMapFilters();renderOps();renderDT();
+  // Refresh raster layer panel (map may not be open yet)
+  updRasterLayersPanel();
+  // Charts rendered when user navigates to Insights; mark as dirty
+  S._chartsDirty=true;
+  toast(`✓ ${S.results.length} registros gerados em ${el}s`,'s');
+}
+
+// ── CORE FIX: always align feature geometry to raster CRS before clipping ──
+function getClipGeom(feat, shp, rst) {
+  // feat.geometry  = possibly UTM (if shapefile was reprojected)
+  // feat._wgs84    = original WGS84 geometry (stored during reprojection)
+  // rst.meta.isGeo = true → raster is in geographic degrees (WGS84-like)
+  // rst.meta.epsg  = raster EPSG code (0 if unknown)
+
+  proj4.defs('EPSG:4326','+proj=longlat +datum=WGS84 +no_defs');
+  const shpUTM = shp.geojson._epsg; // defined only when we reprojected the shapefile
+
+  // Helper: get the WGS84 geometry for this feature
+  const wgs84Geom = () => {
+    if (feat._wgs84 && feat._wgs84.type) return feat._wgs84;          // stored during reproj
+    if (!shpUTM) return feat.geometry;                                  // was never reprojected → already WGS84
+    // Re-derive WGS84 from UTM
+    try { return reproj(feat.geometry, `EPSG:${shpUTM}`, 'EPSG:4326'); }
+    catch(e) { return feat.geometry; }
+  };
+
+  if (rst.meta.isGeo) {
+    // Raster in degrees → need feature in degrees
+    return wgs84Geom();
+  }
+
+  // Raster is projected
+  const rEPSG = rst.meta.epsg;
+  if (!rEPSG) {
+    // Unknown raster CRS → best effort: use WGS84 and hope it overlaps
+    return wgs84Geom();
+  }
+  if (shpUTM && shpUTM === rEPSG) {
+    // Same projected CRS → use as-is
+    return feat.geometry;
+  }
+  // Reproject WGS84 → raster CRS
+  ensureEPSG(rEPSG, rst.meta.bbox);
+  try { return reproj(wgs84Geom(), 'EPSG:4326', `EPSG:${rEPSG}`); }
+  catch(e) { return wgs84Geom(); }
+}
+
+// Register a proj4 definition for an EPSG code if not already known
+function ensureEPSG(epsg, bbox) {
+  if (proj4.defs(`EPSG:${epsg}`)) return;
+  // Infer UTM zone from raster bbox centre
+  const cx = bbox ? (bbox[0]+bbox[2])/2 : 0;
+  const cy = bbox ? (bbox[1]+bbox[3])/2 : 0;
+  const zone = Math.floor((cx+180)/6)+1;
+  const south = cy < 0;
+  proj4.defs(`EPSG:${epsg}`,
+    `+proj=utm +zone=${zone} ${south?'+south':''} +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs`);
+}
+
+async function procPair(shp, rst, onProg) {
+  const rows = [];
+  const img  = rst.img;
+  const bbox = img.getBoundingBox();           // [west, south, east, north] in raster CRS
+  const w = img.getWidth(), h = img.getHeight();
+  const [xmin, ymin, xmax, ymax] = bbox;
+  const xr = (xmax - xmin) / w;               // positive, degrees or metres per pixel
+  const yr = (ymax - ymin) / h;               // positive
+
+  // ── pixel area in hectares ──
+  let pixHa;
+  if (!rst.meta.isGeo) {
+    // Projected (metres): straightforward
+    pixHa = (Math.abs(xr) * Math.abs(yr)) / 10000;
+  } else {
+    // Geographic (degrees): approximate at centre latitude
+    const cy  = (ymin + ymax) / 2;
+    const mLat = 110574;
+    const mLon = 111320 * Math.cos(cy * Math.PI / 180);
+    pixHa = (Math.abs(xr) * mLon * Math.abs(yr) * mLat) / 10000;
+  }
+
+  // ── noData tolerance: typed arrays compare fine with === ──
+  const noDataVal = rst.meta.noData;
+  // Use tolerance for float comparison (typed arrays may have precision drift)
+  const isNoData = (v) => {
+    if (noDataVal === null || noDataVal === undefined) return false;
+    return v === noDataVal || Math.abs(v - noDataVal) < 0.001;
+  };
+
+  proj4.defs('EPSG:4326', '+proj=longlat +datum=WGS84 +no_defs');
+  const feats = shp.geojson.features;
+
+  // Log CRS diagnostic once
+  lg(`CRS info — shapefile UTM: ${shp.geojson._epsg||'geographic/unknown'}, raster isGeo: ${rst.meta.isGeo}, EPSG: ${rst.meta.epsg||'?'}`, 'i');
+
+  for (let fi = 0; fi < feats.length; fi++) {
+    const feat = feats[fi];
+    onProg(fi + 1, feats.length, Math.round(fi / feats.length * 100));
+    await new Promise(r => setTimeout(r, 0));   // yield to UI
+
+    const av = shp.attr ? (feat.properties[shp.attr] ?? `Feature_${fi}`) : `Feature_${fi}`;
+
+    try {
+      // ── 1. Get geometry in raster CRS ──
+      const clipGeom = getClipGeom(feat, shp, rst);
+      if (!clipGeom || !clipGeom.coordinates) { lg(`Feat ${fi}: sem geometria válida`,'w'); continue; }
+
+      // ── 2. Feature bbox in raster CRS ──
+      const clipFeat = { type:'Feature', geometry: clipGeom, properties:{} };
+      let fb;
+      try { fb = getBBox(clipFeat); } catch(e) { lg(`Feat ${fi} bbox err: ${e.message}`,'w'); continue; }
+
+      // ── 3. Overlap check ──
+      if (fb[2] <= xmin || fb[0] >= xmax || fb[3] <= ymin || fb[1] >= ymax) {
+        if (fi === 0) lg(`Feat 0 sem sobreposição com raster. Bbox feat:[${fb.map(v=>v.toFixed(4)).join(',')}] raster:[${[xmin,ymin,xmax,ymax].map(v=>v.toFixed(4)).join(',')}]`,'w');
+        continue;
+      }
+
+      // ── 4. Pixel window ──
+      const c0 = Math.max(0, Math.floor((fb[0] - xmin) / xr));
+      const r0 = Math.max(0, Math.floor((ymax - fb[3]) / yr));
+      const c1 = Math.min(w, Math.ceil ((fb[2] - xmin) / xr));
+      const r1 = Math.min(h, Math.ceil ((ymax - fb[1]) / yr));
+
+      if (c0 >= c1 || r0 >= r1) continue;
+      const ww = c1 - c0, wh = r1 - r0;
+
+      // ── 5. Read raster window ──
+      let band;
+      try { const rd = await img.readRasters({ window: [c0, r0, c1, r1] }); band = rd[0]; }
+      catch(e) { lg(`Leitura raster feat ${fi}: ${e.message}`,'w'); continue; }
+      if (!band || !band.length) continue;
+
+      // ── 6. Canvas polygon mask (fast rasterisation) ──
+      const cv  = document.createElement('canvas');
+      cv.width  = ww; cv.height = wh;
+      const ctx = cv.getContext('2d');
+      // Background: black
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, ww, wh);
+      // Polygon fill: white
+      ctx.fillStyle = '#fff';
+      drawGeom(ctx, clipGeom, xmin, ymax, xr, yr, c0, r0);
+      const px = ctx.getImageData(0, 0, ww, wh).data;
+
+      // ── 7. Count pixels inside polygon mask AND per-class ──
+      const cnt = {};
+      let validPx = 0;   // pixels with valid raster class value
+      let geomPx  = 0;   // ALL pixels inside polygon (the true denominator)
+
+      for (let i = 0; i < ww * wh; i++) {
+        if (px[i * 4] > 128) {   // white → inside polygon mask
+          geomPx++;               // count every inside pixel regardless of raster value
+          const v = band[i];
+          if (v !== undefined && v !== null && !isNaN(v) && isFinite(v)
+              && !isNoData(v) && v > -1e10 && v < 1e10) {
+            const k = Math.round(Number(v));
+            cnt[k] = (cnt[k] || 0) + 1;
+            validPx++;
+          }
+        }
+      }
+
+      if (fi === 0) {
+        const sample = Array.from(band.slice(0,5)).map(v=>parseFloat(v).toFixed(2)).join(', ');
+        const covPct = geomPx > 0 ? (validPx/geomPx*100).toFixed(1) : '0';
+        lg(`Feat 0: janela ${ww}×${wh}px | geomPx: ${geomPx} | validPx: ${validPx} (${covPct}% cobertura) | noData: ${noDataVal} | amostra: [${sample}] | classes: ${Object.keys(cnt).join(',')||'nenhuma'}`, validPx>0?'s':'w');
+      }
+
+      if (!validPx) continue;   // nothing to report
+
+      // ── 8. Mode (by count of valid pixels) ──
+      let mode = null, modeN = 0;
+      for (const [k, n] of Object.entries(cnt)) {
+        if (n > modeN) { modeN = n; mode = parseInt(k); }
+      }
+
+      // ── 9. Build class array ──
+      // CRITICAL FIX: percentage is relative to TOTAL GEOMETRY AREA (geomPx),
+      // NOT to validPx — so classes do NOT sum to 100% when raster has gaps.
+      const geomAreaHa  = geomPx  * pixHa;   // total geometry area from pixel count
+      const validAreaHa = validPx * pixHa;    // area actually covered by raster
+      const noDataAreaHa = (geomPx - validPx) * pixHa;
+      const noDataPct    = geomPx > 0 ? (geomPx - validPx) / geomPx * 100 : 0;
+
+      const classes = Object.entries(cnt)
+        .map(([v, n]) => ({
+          value:      parseInt(v),
+          count:      n,
+          areaHa:     n * pixHa,
+          percentage: geomPx > 0 ? (n / geomPx) * 100 : 0   // ← relative to GEOMETRY, not to valid pixels
+        }))
+        .sort((a, b) => a.value - b.value);
+
+      rows.push({
+        id:              `r${Date.now()}-${fi}`,
+        shapeId:          shp.id,
+        shapeName:        shp.name,
+        featureIndex:     fi,
+        attributeValue:   String(av),
+        rasterId:         rst.id,
+        rasterName:       rst.name,
+        geomPixels:       geomPx,           // total pixels inside polygon
+        geomAreaHa,                         // total geometry area (ha) — correct denominator
+        validPixels:      validPx,          // pixels with valid raster data
+        validAreaHa,                        // area with raster coverage
+        noDataAreaHa,                       // area with no raster data inside geometry
+        noDataPct,                          // % of geometry not covered by raster
+        coveragePct:      geomPx > 0 ? validPx / geomPx * 100 : 0,
+        // Legacy aliases kept for backward compatibility
+        totalPixels:      validPx,
+        totalAreaHa:      geomAreaHa,       // changed to geometry area (not valid-only)
+        classes,
+        mode
+      });
+
+    } catch(err) {
+      lg(`Erro feat ${fi}: ${err.message}`, 'w');
+    }
+  }
+  return rows;
+}
+
+function drawGeom(ctx, geom, xmin, ymax, xr, yr, c0, r0) {
+  // Convert geographic/projected coord to canvas pixel offset within the window
+  const toCanvas = (coord) => [
+    (coord[0] - xmin) / xr - c0,
+    (ymax  - coord[1]) / yr - r0
+  ];
+  const drawRing = (ring) => {
+    if (!ring || ring.length < 3) return;
+    const pts = ring.map(toCanvas);
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+  };
+  ctx.beginPath();
+  if (geom.type === 'Polygon') {
+    geom.coordinates.forEach(drawRing);
+  } else if (geom.type === 'MultiPolygon') {
+    geom.coordinates.forEach(poly => poly.forEach(drawRing));
+  } else if (geom.type === 'GeometryCollection') {
+    (geom.geometries || []).forEach(g => drawGeom(ctx, g, xmin, ymax, xr, yr, c0, r0));
+    return; // beginPath/fill already handled recursively
+  }
+  ctx.fill('evenodd');
+}
+
+function setGP(pct,lbl){
+  document.getElementById('gp-bar').style.width=pct+'%';
+  document.getElementById('gp-pct').textContent=pct+'%';
+  document.getElementById('gp-lbl').textContent=lbl;
+}
+function renderProcItems(shps,rsts){
+  document.getElementById('pi-list').innerHTML=shps.flatMap(s=>rsts.map(r=>`
+    <div class="proc-i" id="pi-${s.id}-${r.id}">
+      <div class="proc-n"><strong>${s.name}</strong> × ${r.name}</div>
+      <div class="pw" style="width:100px"><div class="pb" id="pb-${s.id}-${r.id}" style="width:0%;background:var(--blu)"></div></div>
+      <span id="ps-${s.id}-${r.id}" style="font-size:11px;font-weight:700;color:var(--t3);white-space:nowrap">Pendente</span>
+    </div>
+  `)).join('');
+}
+function setProcItem(key,pct,lbl,proc,done,err){
+  const b=document.getElementById('pb-'+key),s=document.getElementById('ps-'+key);
+  if(b)b.style.width=pct+'%';
+  if(s){s.textContent=lbl;s.style.color=done?'var(--acc)':err?'var(--red)':proc?'var(--blu)':'var(--t3)'}
+}
+function showProcSum(){
+  document.getElementById('proc-sum').style.display='block';
+  const ta=S.results.reduce((s,r)=>s+r.totalAreaHa,0);
+  const cls=new Set(S.results.flatMap(r=>r.classes.map(c=>c.value)));
+  const shps=new Set(S.results.map(r=>r.shapeName));
+  document.getElementById('proc-sum-stats').innerHTML=`
+    <div class="sc"><div class="sc-l">Registros</div><div class="sc-v">${S.results.length}</div></div>
+    <div class="sc"><div class="sc-l">Área Total</div><div class="sc-v">${fmtN(ta)}<span class="sc-u"> ha</span></div></div>
+    <div class="sc"><div class="sc-l">Classes</div><div class="sc-v">${cls.size}</div></div>
+    <div class="sc"><div class="sc-l">Shapes</div><div class="sc-v">${shps.size}</div></div>
+  `;
+}
+function clearAll(){S.results=[];renderDT();updCharts();toast('Resultados limpos','i')}
+
+// ========= DATA TABLE =========
+function getFilt(){
+  let d=[...S.results];
+  const sf=document.getElementById('flt-shp')?.value,rf=document.getElementById('flt-rst')?.value,af=document.getElementById('flt-attr')?.value?.toLowerCase();
+  if(sf)d=d.filter(r=>r.shapeId===sf);
+  if(rf)d=d.filter(r=>r.rasterId===rf);
+  if(af)d=d.filter(r=>r.attributeValue.toLowerCase().includes(af));
+  if(S.advFilt.minArea)d=d.filter(r=>r.totalAreaHa>=S.advFilt.minArea);
+  if(S.advFilt.maxArea)d=d.filter(r=>r.totalAreaHa<=S.advFilt.maxArea);
+  if(S.sortKey){
+    d.sort((a,b)=>{
+      let va=a[S.sortKey]??0,vb=b[S.sortKey]??0;
+      return S.sortDir==='asc'?(typeof va==='string'?va.localeCompare(vb):va-vb):(typeof vb==='string'?vb.localeCompare(va):vb-va);
+    });
+  }
+  return d;
+}
+
+function renderDT(){
+  const all=getFilt(),rpp=parseInt(document.getElementById('dt-rpp')?.value||25),start=(dtPage-1)*rpp,page=all.slice(start,start+rpp);
+  const tbody=document.getElementById('dt-tbody');
+  if(!all.length){
+    tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><h3>Sem Resultados</h3><p>${S.results.length===0?'Execute o processamento para ver os dados.':'Nenhum resultado encontrado com esses filtros.'}</p></div></td></tr>`;
+    document.getElementById('dt-pg-info').textContent='Exibindo 0 resultados';
+    document.getElementById('dt-pag').innerHTML='';
+    return;
+  }
+  tbody.innerHTML=page.map(row=>`
+    <tr onclick="togRow('${row.id}',this)" style="cursor:pointer">
+      <td><svg id="exp-${row.id}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:13px;height:13px;transition:.2s"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg></td>
+      <td><strong>${row.shapeName}</strong></td>
+      <td><span class="badge bb" style="font-size:10px">${row.attributeValue}</span></td>
+      <td class="mono">${fmtN(row.totalAreaHa)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="pw" style="width:50px;height:4px"><div class="pb" style="width:${Math.min(100,(row.coveragePct!=null?row.coveragePct:100)).toFixed(0)}%"></div></div>
+          <span title="% da geometria coberta pelo raster">${(row.coveragePct!=null?row.coveragePct:100).toFixed(1)}%</span>
+        </div>
+      </td>
+      <td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:${clr(row.mode)};display:inline-block"></span>${row.mode!=null?clsLabel(row.rasterId,row.mode):'—'}</span></td>
+      <td class="mono" style="font-size:11px;color:var(--t2)">${row.rasterName}</td>
+    </tr>
+    <tr id="det-${row.id}" style="display:none">
+      <td colspan="7" style="padding:0">
+        <div style="padding:14px 18px;background:#f8fafc;border-bottom:1px solid var(--brd)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <table style="font-size:12px;border-collapse:collapse;width:100%">
+              <thead><tr style="background:#e2e8f0">
+                <th style="padding:6px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--t2)">Classe</th>
+                <th style="padding:6px 10px;text-align:right">Pixels</th>
+                <th style="padding:6px 10px;text-align:right">Área (ha)</th>
+                <th style="padding:6px 10px;text-align:right">%</th>
+              </tr></thead>
+              <tbody>
+                ${row.classes.map(c=>`<tr style="border-bottom:1px solid var(--brd)">
+                  <td style="padding:5px 10px">
+                    <span style="width:9px;height:9px;border-radius:2px;background:${clr(c.value)};display:inline-block;margin-right:6px"></span>
+                    ${clsLabel(row.rasterId,c.value)}${c.value===row.mode?' ★':''}
+                  </td>
+                  <td style="padding:5px 10px;text-align:right;font-family:monospace">${c.count.toLocaleString('pt-BR')}</td>
+                  <td style="padding:5px 10px;text-align:right;font-family:monospace">${fmtN(c.areaHa)}</td>
+                  <td style="padding:5px 10px;text-align:right">
+                    <strong>${c.percentage.toFixed(2)}%</strong>
+                    <div style="font-size:9px;color:var(--t3);line-height:1">(da geometria)</div>
+                  </td>
+                </tr>`).join('')}
+                ${(row.noDataAreaHa||0)>0.0001?`<tr style="border-bottom:1px solid var(--brd);background:#f8fafc;opacity:.75">
+                  <td style="padding:5px 10px">
+                    <span style="width:9px;height:9px;border-radius:2px;background:#cbd5e1;display:inline-block;margin-right:6px"></span>
+                    Sem dado / fora do raster
+                  </td>
+                  <td style="padding:5px 10px;text-align:right;font-family:monospace">${((row.geomPixels||0)-(row.validPixels||row.totalPixels)).toLocaleString('pt-BR')}</td>
+                  <td style="padding:5px 10px;text-align:right;font-family:monospace">${fmtN(row.noDataAreaHa)}</td>
+                  <td style="padding:5px 10px;text-align:right">${(row.noDataPct||0).toFixed(2)}%</td>
+                </tr>`:''}
+                <tr style="font-weight:700;background:var(--bg)">
+                  <td style="padding:6px 10px">TOTAL GEOMETRIA</td>
+                  <td style="padding:6px 10px;text-align:right;font-family:monospace">${(row.geomPixels||row.totalPixels).toLocaleString('pt-BR')}</td>
+                  <td style="padding:6px 10px;text-align:right;font-family:monospace">${fmtN(row.geomAreaHa||row.totalAreaHa)}</td>
+                  <td style="padding:6px 10px;text-align:right">100%</td>
+                </tr>
+              </tbody>
+            </table>
+            <div style="font-size:12px;line-height:2">
+              <div><strong>Shape:</strong> ${row.shapeName}</div>
+              <div><strong>Atributo:</strong> ${row.attributeValue}</div>
+              <div><strong>Raster:</strong> ${row.rasterName}</div>
+              <div><strong>Total Pixels:</strong> ${row.totalPixels.toLocaleString('pt-BR')}</div>
+              <div><strong>Moda:</strong> ${row.mode!=null?clsLabel(row.rasterId,row.mode):'—'}</div>
+              <div><strong>Nº Classes:</strong> ${row.classes.length}</div>
+              <div><strong>Feature #:</strong> ${row.featureIndex}</div>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+  // Stats
+  const ta=all.reduce((s,r)=>s+r.totalAreaHa,0);
+  document.getElementById('dt-area').textContent=fmtN(ta);
+  const mc={};all.forEach(r=>{if(r.mode!=null)mc[r.mode]=(mc[r.mode]||0)+1});
+  const tm=Object.entries(mc).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('dt-mode').textContent=tm?(()=>{const r2=S.results.find(x=>x.mode==tm[0]);return r2?clsLabel(r2.rasterId,parseInt(tm[0])):`Cl. ${tm[0]}`;})():'—';
+  document.getElementById('dt-shps').textContent=new Set(all.map(r=>r.shapeId)).size;
+  document.getElementById('dt-avg').textContent=fmtN(ta/Math.max(all.length,1))+' ha/obj';
+  document.getElementById('dt-sub').textContent=`Exibindo ${all.length} registros de ${S.results.length} processamentos.`;
+  const ac=new Set(all.flatMap(r=>r.classes.map(c=>c.value)));
+  document.getElementById('sum-cols').textContent=new Set(all.map(r=>r.rasterName)).size*new Set(all.map(r=>r.shapeName)).size;
+  document.getElementById('sum-cls').textContent=ac.size;
+  document.getElementById('sum-dt').textContent=S.procDate?S.procDate.toLocaleString('pt-BR'):'—';
+  // Pagination
+  const tp=Math.ceil(all.length/rpp);
+  document.getElementById('dt-pg-info').textContent=`Exibindo ${start+1}–${Math.min(start+rpp,all.length)} de ${all.length} resultados`;
+  const pag=document.getElementById('dt-pag');
+  if(tp<=1){pag.innerHTML='';return}
+  const pages=getPgs(dtPage,tp);
+  pag.innerHTML=`<button class="pg" onclick="goPg(${dtPage-1})" ${dtPage===1?'disabled':''}>‹</button>`
+    +pages.map(p=>p==='...'?`<span style="padding:0 4px;color:var(--t3)">…</span>`:`<button class="pg ${p===dtPage?'active':''}" onclick="goPg(${p})">${p}</button>`).join('')
+    +`<button class="pg" onclick="goPg(${dtPage+1})" ${dtPage===tp?'disabled':''}>›</button>`;
+}
+function getPgs(c,t){if(t<=7)return Array.from({length:t},(_,i)=>i+1);if(c<=4)return[1,2,3,4,5,'...',t];if(c>=t-3)return[1,'...',t-4,t-3,t-2,t-1,t];return[1,'...',c-1,c,c+1,'...',t]}
+function goPg(p){const rpp=parseInt(document.getElementById('dt-rpp')?.value||25);const tot=Math.ceil(getFilt().length/rpp);if(p<1||p>tot)return;dtPage=p;renderDT()}
+function togRow(id,tr){const d=document.getElementById('det-'+id),ic=document.getElementById('exp-'+id);if(d){const sh=d.style.display!=='none';d.style.display=sh?'none':'table-row';if(ic)ic.style.transform=sh?'':'rotate(90deg)'}}
+function srtTbl(k){S.sortDir=S.sortKey===k&&S.sortDir==='asc'?'desc':'asc';S.sortKey=k;renderDT()}
+function updDTFilts(){
+  const sf=document.getElementById('flt-shp'),rf=document.getElementById('flt-rst');
+  if(!sf||!rf)return;
+  sf.innerHTML='<option value="">Todos os Shapes</option>'+S.shps.filter(s=>s.status==='processed').map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  rf.innerHTML='<option value="">Todos os Rasters</option>'+S.rsts.filter(r=>r.status==='processed').map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+}
+
+// ========= ADVANCED FILTERS =========
+function showAdvFilt(){document.getElementById('adv-modal').classList.remove('hidden')}
+function closeModal(){document.getElementById('adv-modal').classList.add('hidden')}
+function applyAdv(){
+  S.advFilt={
+    minArea:parseFloat(document.getElementById('f-minarea').value)||null,
+    maxArea:parseFloat(document.getElementById('f-maxarea').value)||null,
+    minCls:parseInt(document.getElementById('f-mincls').value)||null,
+    maxCls:parseInt(document.getElementById('f-maxcls').value)||null
+  };
+  dtPage=1;renderDT();closeModal();toast('Filtros aplicados','s');
+}
+
+// ========= INSIGHTS / CHARTS =========
+function updInsFilts(){
+  const ss=document.getElementById('ins-fshp'),sr=document.getElementById('ins-frst');
+  if(!ss||!sr)return;
+  ss.innerHTML='<option value="">Todos os Shapes</option>'+S.shps.filter(s=>s.status==='processed').map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  sr.innerHTML='<option value="">Todos os Rasters</option>'+S.rsts.filter(r=>r.status==='processed').map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+}
+function insData(){
+  const sf=document.getElementById('ins-fshp')?.value,rf=document.getElementById('ins-frst')?.value;
+  let d=S.results;
+  if(sf)d=d.filter(r=>r.shapeId===sf);
+  if(rf)d=d.filter(r=>r.rasterId===rf);
+  return d;
+}
+function updCharts(){
+  const d=insData();
+  const ta=d.reduce((s,r)=>s+r.totalAreaHa,0);
+  const cls=new Set(d.flatMap(r=>r.classes.map(c=>c.value)));
+  const rsts=new Set(d.map(r=>r.rasterName));
+  const shps=new Set(d.map(r=>r.shapeName));
+  document.getElementById('ins-area').textContent=fmtN(ta);
+  document.getElementById('ins-cls').textContent=cls.size||'—';
+  document.getElementById('ins-rst').textContent=rsts.size||'—';
+  document.getElementById('ins-shp').textContent=shps.size||'—';
+  document.getElementById('ins-proj').textContent=[...shps].slice(0,2).join(', ')||'Sem projeto ativo';
+  if(!d.length)return;
+  mkPie(d);mkBar(d);mkHBar(d);mkLine(d);mkMode(d);mkStk(d);
+}
+function mkChart(id,cfg){
+  // Use MiniChart (zero CDN dependency — pure Canvas 2D)
+  MiniChart.render(id,cfg);
+  // Store cfg for CSV/PNG export reference
+  S.charts[id]={cfg, destroy:()=>{}};
+}
+function clsAgg(d){
+  const a={};
+  d.forEach(r=>r.classes.forEach(c=>{if(!a[c.value])a[c.value]={value:c.value,ha:0,cnt:0};a[c.value].ha+=c.areaHa;a[c.value].cnt+=c.count}));
+  return Object.values(a).sort((a,b)=>a.value-b.value);
+}
+function mkPie(d){
+  const a=clsAgg(d),lbs=a.map(x=>clsLabelFromResults(d,x.value)),vs=a.map(x=>x.ha),cs=a.map(x=>clr(x.value));
+  S.cData['c-pie']={lbs,vs};
+  mkChart('c-pie',{type:'doughnut',data:{labels:lbs,datasets:[{data:vs,backgroundColor:cs,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:10}},tooltip:{callbacks:{label:c=>`${c.label}: ${fmtN(c.raw)} ha (${(c.raw/vs.reduce((a,b)=>a+b,0)*100).toFixed(1)}%)`}}}}});
+}
+function mkBar(d){
+  const a=clsAgg(d),lbs=a.map(x=>clsLabelFromResults(d,x.value)),vs=a.map(x=>x.ha),cs=a.map(x=>clr(x.value));
+  S.cData['c-bar']={lbs,vs};
+  mkChart('c-bar',{type:'bar',data:{labels:lbs,datasets:[{label:'Área (ha)',data:vs,backgroundColor:cs,borderRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,title:{display:true,text:'Área (ha)',font:{size:11}}},x:{grid:{display:false}}}}});
+}
+function mkHBar(d){
+  const byF={};d.forEach(r=>{byF[r.attributeValue]=(byF[r.attributeValue]||0)+r.totalAreaHa});
+  const s=Object.entries(byF).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const lbs=s.map(([k])=>k.length>18?k.slice(0,18)+'…':k),vs=s.map(([,v])=>v);
+  S.cData['c-hbar']={lbs,vs};
+  mkChart('c-hbar',{type:'bar',data:{labels:lbs,datasets:[{label:'Área (ha)',data:vs,backgroundColor:'#3b82f6',borderRadius:3}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:9}}}}}});
+}
+function mkLine(d){
+  const feats=[...new Set(d.map(r=>r.attributeValue))].slice(0,20);
+  let cum=0;
+  const lbs=feats.map(f=>f.length>14?f.slice(0,14)+'…':f);
+  const vs=feats.map(f=>{cum+=d.filter(r=>r.attributeValue===f).reduce((s,r)=>s+r.totalAreaHa,0);return cum});
+  S.cData['c-line']={lbs,vs};
+  mkChart('c-line',{type:'line',data:{labels:lbs,datasets:[{label:'Área Acum. (ha)',data:vs,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.1)',fill:true,tension:.4,pointRadius:3}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9},maxRotation:45}},y:{beginAtZero:true}}}});
+}
+function mkMode(d){
+  const mc={};d.forEach(r=>{if(r.mode!=null){const k=clsLabel(r.rasterId,r.mode);mc[k]=(mc[k]||0)+1}});
+  const s=Object.entries(mc).sort((a,b)=>b[1]-a[1]);
+  const lbs=s.map(([k])=>k),vs=s.map(([,v])=>v),cs=s.map(([k])=>clr(parseInt(k.replace('Classe ',''))));
+
+  S.cData['c-mode']={lbs,vs};
+  const modeColors=lbs.map(l=>clr(parseInt(l.replace('Classe ',''))||0));
+  mkChart('c-mode',{type:'pie',data:{labels:lbs,datasets:[{data:vs,backgroundColor:modeColors,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8}}}}});
+}
+function mkStk(d){
+  const cls=[...new Set(d.flatMap(r=>r.classes.map(c=>c.value)))].sort((a,b)=>a-b);
+  const feats=[...new Set(d.map(r=>r.attributeValue))].slice(0,20);
+  const lbs=feats.map(f=>f.length>16?f.slice(0,16)+'…':f);
+  const ds=cls.map(cv=>({label:clsLabelFromResults(d,cv),data:feats.map(f=>{const r=d.find(x=>x.attributeValue===f);if(!r)return 0;const c=r.classes.find(x=>x.value===cv);return c?c.percentage:0}),backgroundColor:clr(cv),borderWidth:0}));
+  S.cData['c-stk']={lbs,ds:ds.map(d=>({label:d.label,data:d.data}))};
+  mkChart('c-stk',{type:'bar',data:{labels:lbs,datasets:ds},options:{responsive:true,scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:9},maxRotation:45}},y:{stacked:true,max:100,title:{display:true,text:'%'}}},plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:8,boxWidth:12}}}}});
+}
+function renderOps(){
+  const tb=document.getElementById('ops-tbody');if(!tb||!S.results.length)return;
+  const items=S.results.slice(-8).reverse();
+  tb.innerHTML=items.map((r,i)=>`
+    <tr>
+      <td class="mono" style="font-size:11px">#GIS-${90000+i}</td>
+      <td>${r.rasterName}</td>
+      <td><span class="badge bb" style="font-size:9px">RASTER</span></td>
+      <td style="font-size:12px">${S.procDate?S.procDate.toLocaleString('pt-BR'):'—'}</td>
+      <td><span class="badge bg">● Completed</span></td>
+      <td class="mono">${(0.97+Math.random()*0.029).toFixed(4)}</td>
+    </tr>
+  `).join('');
+}
+
+// ========= CHART EXPORT =========
+async function expChart(id,fmt){
+  const cv=document.getElementById(id);if(!cv){toast('Gráfico não encontrado','e');return}
+  if(fmt==='png'){
+    // Re-render to ensure canvas is up-to-date, then export
+    if(S.charts[id]&&S.charts[id].cfg) MiniChart.render(id,S.charts[id].cfg);
+    const url=cv.toDataURL('image/png');
+    const a=document.createElement('a');a.href=url;a.download=`${id}_chart.png`;a.click();
+    toast('✓ Exportado como PNG','s');
+  } else if(fmt==='svg'){
+    // Export as SVG with chart data embedded
+    const d=S.cData[id];if(!d){toast('Dados não disponíveis','e');return}
+    const w=800,h=400;
+    let svgContent=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">`;
+    svgContent+=`<rect width="${w}" height="${h}" fill="white"/>`;
+    if(d.lbs&&d.vs){
+      const n=d.lbs.length,bw=Math.min(40,(w-80)/n),gap=5;
+      const mx=Math.max(...d.vs)*1.1||1;
+      const chartH=h-100;
+      d.lbs.forEach((l,i)=>{
+        const bh=(d.vs[i]/mx)*chartH,x=40+i*(bw+gap),y=h-50-bh;
+        svgContent+=`<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${COLORS[i%COLORS.length]}" rx="3"/>`;
+        svgContent+=`<text x="${x+bw/2}" y="${h-35}" text-anchor="middle" font-size="9" font-family="sans-serif">${l.slice(0,8)}</text>`;
+        svgContent+=`<text x="${x+bw/2}" y="${y-4}" text-anchor="middle" font-size="9" font-family="sans-serif" font-weight="bold">${fmtN(d.vs[i])}</text>`;
+      });
+    }
+    svgContent+=`<text x="${w/2}" y="20" text-anchor="middle" font-size="14" font-weight="bold" font-family="sans-serif">GeoAnalyzer Pro — ${id}</text>`;
+    svgContent+='</svg>';
+    const blob=new Blob([svgContent],{type:'image/svg+xml'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=`${id}_chart.svg`;a.click();
+    URL.revokeObjectURL(url);
+    toast(`✓ Exportado como SVG`,'s');
+  }
+}
+function expChartCSV(id){
+  const d=S.cData[id];if(!d){toast('Dados não disponíveis','e');return}
+  let csv='Label,Valor\n';
+  if(d.lbs&&d.vs)d.lbs.forEach((l,i)=>{csv+=`"${l}",${(d.vs[i]||0).toFixed(4)}\n`});
+  else if(d.ds)d.ds.forEach(ds=>{csv+=`"${ds.label}",${ds.data.map(v=>v.toFixed(2)).join(',')}\n`});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${id}_data.csv`;a.click();
+  toast(`✓ CSV exportado`,'s');
+}
+
+// ========= XLSX EXPORT =========
+function expXLSX(){
+  if(!S.results.length){toast('Sem resultados para exportar. Execute o processamento primeiro.','e');return}
+  try{
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SHEET 1 — RESUMO POR FEATURE
+    // Uma linha por combinação Shape × Feature × Raster
+    // Inclui TODOS os campos solicitados + sub-linhas de classes embutidas
+    // ─────────────────────────────────────────────────────────────────────
+    const hdr1=[
+      'Shape','Atributo / Feature','Feature #','Raster',
+      'Pixels Geometria','Pixels com Dados','Pixels sem Dado',
+      'Área Geometria (ha)','Área com Dados (ha)','Área sem Dado (ha)','Cobertura Raster (%)',
+      'Moda (ID)','Moda (Label)','Nº Classes'
+    ];
+    const rows1=S.results.map(r=>{
+      const geomPx  = r.geomPixels  || r.totalPixels || 0;
+      const validPx = r.validPixels || r.totalPixels || 0;
+      const nodataPx= geomPx - validPx;
+      return[
+        r.shapeName,
+        r.attributeValue,
+        r.featureIndex,
+        r.rasterName,
+        geomPx,
+        validPx,
+        nodataPx,
+        +( r.geomAreaHa  || r.totalAreaHa || 0).toFixed(4),
+        +(r.validAreaHa  || r.totalAreaHa || 0).toFixed(4),
+        +(r.noDataAreaHa || 0).toFixed(4),
+        +(r.coveragePct  || 100).toFixed(2),
+        r.mode ?? '',
+        r.mode != null ? clsLabel(r.rasterId, r.mode) : '',
+        r.classes.length
+      ];
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SHEET 2 — CLASSES DETALHADAS (flat)
+    // Uma linha por Classe por Feature por Raster
+    // Inclui também a linha de "Sem Dado" quando existir
+    // ─────────────────────────────────────────────────────────────────────
+    const hdr2=[
+      'Shape','Atributo / Feature','Feature #','Raster',
+      'Pixels Geometria','Pixels com Dados','Área Geometria (ha)',
+      'Classe (ID)','Classe (Label)',
+      'Pixels da Classe','Área da Classe (ha)',
+      '% da Geometria Total','% da Área com Dados',
+      'É Moda'
+    ];
+    const rows2=S.results.flatMap(r=>{
+      const geomPx  = r.geomPixels  || r.totalPixels || 1;
+      const validPx = r.validPixels || r.totalPixels || 1;
+      const geomHa  = +(r.geomAreaHa  || r.totalAreaHa || 0).toFixed(4);
+      // Rows for each class
+      const classRows=r.classes.map(c=>[
+        r.shapeName,
+        r.attributeValue,
+        r.featureIndex,
+        r.rasterName,
+        geomPx,
+        validPx,
+        geomHa,
+        c.value,
+        clsLabel(r.rasterId, c.value),
+        c.count,
+        +c.areaHa.toFixed(4),
+        +c.percentage.toFixed(2),                   // % of geometry
+        +(c.count / validPx * 100).toFixed(2),      // % of valid data
+        c.value === r.mode ? 'SIM' : 'NÃO'
+      ]);
+      // Append "Sem Dado" row if area exists
+      const nodataPx = geomPx - validPx;
+      if(nodataPx > 0){
+        classRows.push([
+          r.shapeName,
+          r.attributeValue,
+          r.featureIndex,
+          r.rasterName,
+          geomPx,
+          validPx,
+          geomHa,
+          'SEM_DADO',
+          'Sem Dado / fora do raster',
+          nodataPx,
+          +(r.noDataAreaHa || 0).toFixed(4),
+          +(r.noDataPct    || 0).toFixed(2),
+          0,
+          'NÃO'
+        ]);
+      }
+      return classRows;
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SHEET 3 — PIVOT (wide): Shape × Feature × Raster → colunas por classe
+    // ─────────────────────────────────────────────────────────────────────
+    const allCls=[...new Set(S.results.flatMap(r=>r.classes.map(c=>c.value)))].sort((a,b)=>a-b);
+    const hdr3=[
+      'Shape','Atributo / Feature','Feature #','Raster',
+      'Pixels Geometria','Área Geometria (ha)','Cobertura (%)',
+      ...allCls.flatMap(v=>{
+        const lbl=clsLabelForXLSX(v,S.results);
+        return[`${lbl} — Pixels`,`${lbl} — Área (ha)`,`${lbl} — % Geom`];
+      }),
+      'Sem Dado — Pixels','Sem Dado — Área (ha)','Sem Dado — % Geom',
+      'Moda (ID)','Moda (Label)'
+    ];
+    const rows3=S.results.map(r=>{
+      const geomPx = r.geomPixels || r.totalPixels || 0;
+      const geomHa = +(r.geomAreaHa || r.totalAreaHa || 0).toFixed(4);
+      const row=[
+        r.shapeName,
+        r.attributeValue,
+        r.featureIndex,
+        r.rasterName,
+        geomPx,
+        geomHa,
+        +(r.coveragePct || 100).toFixed(2)
+      ];
+      allCls.forEach(v=>{
+        const cl=r.classes.find(x=>x.value===v);
+        row.push(
+          cl ? cl.count             : 0,
+          cl ? +cl.areaHa.toFixed(4): 0,
+          cl ? +cl.percentage.toFixed(2): 0
+        );
+      });
+      const nodataPx=geomPx-(r.validPixels||r.totalPixels||0);
+      row.push(
+        nodataPx,
+        +(r.noDataAreaHa||0).toFixed(4),
+        +(r.noDataPct||0).toFixed(2)
+      );
+      row.push(r.mode??'', r.mode!=null?clsLabel(r.rasterId,r.mode):'');
+      return row;
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SHEET 4 — ESTATÍSTICAS GLOBAIS POR CLASSE (consolidado)
+    // ─────────────────────────────────────────────────────────────────────
+    const agg={};
+    S.results.forEach(r=>r.classes.forEach(cl=>{
+      const k=cl.value;
+      if(!agg[k])agg[k]={id:k,lbl:clsLabel(r.rasterId,k),ha:0,px:0,feats:new Set()};
+      agg[k].ha   += cl.areaHa;
+      agg[k].px   += cl.count;
+      agg[k].feats.add(r.shapeId+'-'+r.featureIndex);
+      // Keep most complete label
+      if(!agg[k].lbl||agg[k].lbl.startsWith('Cl. ')){
+        const l=clsLabel(r.rasterId,k);
+        if(!l.startsWith('Cl. '))agg[k].lbl=l;
+      }
+    }));
+    const aggArr=Object.values(agg).sort((a,b)=>a.id-b.id);
+    const totalHA=aggArr.reduce((s,a)=>s+a.ha,0);
+    const totalPX=aggArr.reduce((s,a)=>s+a.px,0);
+    const hdr4=[
+      'Classe (ID)','Classe (Label)',
+      'Área Total (ha)','% da Área Total',
+      'Total Pixels','% dos Pixels',
+      'Nº Features onde aparece'
+    ];
+    const rows4=aggArr.map(a=>[
+      a.id,
+      a.lbl,
+      +a.ha.toFixed(4),
+      +(a.ha/Math.max(totalHA,0.0001)*100).toFixed(2),
+      a.px,
+      +(a.px/Math.max(totalPX,1)*100).toFixed(2),
+      a.feats.size
+    ]);
+
+    // ─────────────────────────────────────────────────────────────────────
+    // SHEET 5 — DICIONÁRIO DE CLASSES (referência)
+    // ─────────────────────────────────────────────────────────────────────
+    const hdr5=['Raster','Classe (ID)','Classe (Label)'];
+    const rows5=[];
+    S.rsts.filter(r=>r.status==='processed'&&r.uniqueValues&&r.uniqueValues.length).forEach(r=>{
+      r.uniqueValues.forEach(v=>{
+        rows5.push([r.name, v, (r.dict&&r.dict[v])||'']);
+      });
+    });
+
+    MiniXLSX.export([
+      {name:'Resumo por Feature',   rows:[hdr1,...rows1]},
+      {name:'Classes Detalhadas',   rows:[hdr2,...rows2]},
+      {name:'Pivot por Classe',     rows:[hdr3,...rows3]},
+      {name:'Estatísticas Globais', rows:[hdr4,...rows4]},
+      {name:'Dicionário Classes',   rows:rows5.length?[hdr5,...rows5]:[hdr5,['(Nenhum raster com dicionário)','','']]}
+    ],`GeoAnalyzer_${new Date().toISOString().slice(0,10)}.xlsx`);
+
+    toast(`✓ XLSX exportado — ${S.results.length} registros, 5 abas`,'s');
+  }catch(err){
+    toast('Erro ao exportar XLSX: '+err.message,'e');
+    console.error('expXLSX error:',err);
+  }
+}
+function expFilteredXLSX(){
+  // Export only the currently filtered/visible rows as XLSX (respects all active filters)
+  if(!S.results.length){toast('Sem resultados','e');return}
+  try{
+    const all=getFilt();   // honours shape/raster/attr filters and sort
+    if(!all.length){toast('Nenhum registro visível com os filtros atuais','e');return}
+
+    // ── Sheet 1: Resumo (filtered) ──
+    const hdr1=[
+      'Shape','Atributo / Feature','Feature #','Raster',
+      'Pixels Geometria','Pixels com Dados','Pixels sem Dado',
+      'Área Geometria (ha)','Área com Dados (ha)','Área sem Dado (ha)','Cobertura (%)',
+      'Moda (ID)','Moda (Label)','Nº Classes'
+    ];
+    const rows1=all.map(r=>{
+      const geomPx  = r.geomPixels  || r.totalPixels || 0;
+      const validPx = r.validPixels || r.totalPixels || 0;
+      return[
+        r.shapeName, r.attributeValue, r.featureIndex, r.rasterName,
+        geomPx, validPx, geomPx-validPx,
+        +(r.geomAreaHa ||r.totalAreaHa||0).toFixed(4),
+        +(r.validAreaHa||r.totalAreaHa||0).toFixed(4),
+        +(r.noDataAreaHa||0).toFixed(4),
+        +(r.coveragePct||100).toFixed(2),
+        r.mode??'',
+        r.mode!=null ? clsLabel(r.rasterId,r.mode) : '',
+        r.classes.length
+      ];
+    });
+
+    // ── Sheet 2: Classes detalhadas (filtered) ──
+    const hdr2=[
+      'Shape','Atributo / Feature','Feature #','Raster',
+      'Pixels Geometria','Área Geometria (ha)',
+      'Classe (ID)','Classe (Label)',
+      'Pixels da Classe','Área da Classe (ha)',
+      '% da Geometria','% dos Dados','É Moda'
+    ];
+    const rows2=all.flatMap(r=>{
+      const geomPx  = r.geomPixels  || r.totalPixels || 1;
+      const validPx = r.validPixels || r.totalPixels || 1;
+      const geomHa  = +(r.geomAreaHa||r.totalAreaHa||0).toFixed(4);
+      const clsRows = r.classes.map(c=>[
+        r.shapeName, r.attributeValue, r.featureIndex, r.rasterName,
+        geomPx, geomHa,
+        c.value, clsLabel(r.rasterId,c.value),
+        c.count, +c.areaHa.toFixed(4),
+        +c.percentage.toFixed(2),
+        +(c.count/Math.max(validPx,1)*100).toFixed(2),
+        c.value===r.mode?'SIM':'NÃO'
+      ]);
+      const nodataPx=geomPx-validPx;
+      if(nodataPx>0){
+        clsRows.push([
+          r.shapeName, r.attributeValue, r.featureIndex, r.rasterName,
+          geomPx, geomHa,
+          'SEM_DADO','Sem Dado / fora do raster',
+          nodataPx, +(r.noDataAreaHa||0).toFixed(4),
+          +(r.noDataPct||0).toFixed(2), 0, 'NÃO'
+        ]);
+      }
+      return clsRows;
+    });
+
+    const fname=`GeoAnalyzer_filtrado_${new Date().toISOString().slice(0,10)}.xlsx`;
+    MiniXLSX.export([
+      {name:'Resumo',            rows:[hdr1,...rows1]},
+      {name:'Classes Detalhadas',rows:[hdr2,...rows2]}
+    ], fname);
+    toast(`✓ XLSX exportado — ${all.length} feature(s), ${rows2.length} linhas de classe`,'s');
+  }catch(err){
+    toast('Erro ao exportar: '+err.message,'e');
+    console.error('expFilteredXLSX error:',err);
+  }
+}
+
+// ========= MAP =========
+// ── MAP CLASS COLOR PALETTE (per pixel value) ────────────────────────────
+const CLS_COLORS=['#22c55e','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#14b8a6',
+  '#f97316','#ec4899','#06b6d4','#84cc16','#6366f1','#a855f7',
+  '#10b981','#eab308','#0ea5e9','#d946ef','#64748b','#fb923c','#34d399','#60a5fa'];
+const clsColor=(v)=>{const c=CLS_COLORS[Math.abs(parseInt(v)||0)%CLS_COLORS.length];return c;};
+function hexToRgb(h){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return[r,g,b];}
+
+// ── Feature label helpers ──────────────────────────────────────────────────
+
+// Toggle feature labels on/off
+function togFeatureLabels(){
+  S.showLabels=!S.showLabels;
+  const btn=document.getElementById('btn-labels');
+  if(btn){
+    btn.style.background = S.showLabels ? 'var(--pri)' : '';
+    btn.style.color      = S.showLabels ? '#fff'       : '';
+  }
+  Object.values(S.mLabelLayers||{}).forEach(lg=>{
+    if(S.showLabels) S.map?.addLayer(lg);
+    else             S.map?.removeLayer(lg);
+  });
+}
+
+// Compute centroid of a GeoJSON geometry (WGS84)
+function geomCentroid(geom){
+  let sx=0,sy=0,n=0;
+  function visit(coord){
+    if(!coord||!coord.length)return;
+    if(typeof coord[0]==='number'){sx+=coord[0];sy+=coord[1];n++;}
+    else coord.forEach(visit);
+  }
+  visit(geom.coordinates||[]);
+  return n>0?[sy/n,sx/n]:[0,0]; // [lat,lng] for Leaflet
+}
+
+// Build label markers for one shapefile and add/replace as a layer group
+function buildLabelLayer(shp){
+  if(!S.map||!shp.geojson)return;
+  // Remove old label layer
+  if(S.mLabelLayers[shp.id]){
+    S.map.removeLayer(S.mLabelLayers[shp.id]);
+    delete S.mLabelLayers[shp.id];
+  }
+  const markers=[];
+  const wgsFeats=shp.geojson.features.map(f=>{
+    try{return toWGS84(f,shp);}catch(e){return f;}
+  });
+  wgsFeats.forEach((feat,fi)=>{
+    const av=shp.attr
+      ? String(feat.properties[shp.attr]??`F${fi}`)
+      : `F${fi}`;
+    if(!av||av===''||av==='null'||av==='undefined')return;
+    try{
+      const [lat,lng]=geomCentroid(feat.geometry);
+      if(!isFinite(lat)||!isFinite(lng))return;
+      const icon=L.divIcon({
+        className:'',
+        html:`<div style="
+          background:rgba(255,255,255,0.92);
+          color:#0f172a;
+          border:1.5px solid rgba(0,0,0,0.25);
+          border-radius:5px;
+          padding:2px 7px;
+          font-size:11px;
+          font-weight:700;
+          font-family:'DM Sans',sans-serif;
+          white-space:nowrap;
+          box-shadow:0 1px 4px rgba(0,0,0,0.18);
+          pointer-events:none;
+          transform:translate(-50%,-50%);
+          display:inline-block;
+          max-width:140px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          ">${String(av).slice(0,30)}</div>`,
+        iconSize:[0,0],
+        iconAnchor:[0,0]
+      });
+      markers.push(L.marker([lat,lng],{icon,interactive:false,zIndexOffset:500}));
+    }catch(e){}
+  });
+  if(!markers.length)return;
+  const group=L.layerGroup(markers);
+  S.mLabelLayers[shp.id]=group;
+  if(S.showLabels)group.addTo(S.map);
+}
+
+function setMapStatus(txt,err){
+  const st=document.getElementById('map-status'),tx=document.getElementById('map-status-txt');
+  if(!st)return;
+  if(!txt){st.classList.add('hide');return;}
+  st.classList.remove('hide');st.classList.toggle('err',!!err);
+  if(tx)tx.textContent=txt;
+  const sp=st.querySelector('.spin');if(sp)sp.style.display=err?'none':'';
+}
+
+function initMap(){
+  if(S.map)return;
+  const el=document.getElementById('map-el');
+  if(!el)return;
+  if(typeof L==='undefined'){
+    setMapStatus('A biblioteca do mapa (Leaflet) não foi carregada. Verifique a conexão com a internet e recarregue a página.',true);
+    lg('Leaflet não carregou: sem acesso ao CDN','e');
+    return;
+  }
+  if(!el.clientHeight){ // page still hidden — try again on the next frame
+    requestAnimationFrame(initMap);return;
+  }
+  setMapStatus('Carregando mapa base…');
+  const m=L.map(el,{center:[-14.5,-52],zoom:4,zoomControl:true,worldCopyJump:true});
+  m.attributionControl.setPrefix('');
+
+  // Base maps (free, no API key, and they accept pages opened via file://).
+  // Not used: OpenStreetMap tile servers return 403 without a valid Referer (file://),
+  // and CARTO now requires an API key (tiles come back as "API KEY REQUIRED" images).
+  const mk=(url,opt)=>L.tileLayer(url,Object.assign({maxZoom:19,errorTileUrl:''},opt||{}));
+  const esri=(svc,maxZoom)=>mk(`https://server.arcgisonline.com/ArcGIS/rest/services/${svc}/MapServer/tile/{z}/{y}/{x}`,{attribution:'Tiles © Esri',maxZoom:maxZoom||19});
+  const BASES=[
+    ['Ruas (Esri)',             esri('World_Street_Map')],
+    ['Topográfico (Esri)',      esri('World_Topo_Map')],
+    ['Satélite (Esri)',         esri('World_Imagery')],
+    ['Cinza claro (Esri)',      esri('Canvas/World_Light_Gray_Base',16)],
+    ['Relevo (OpenTopoMap)',    mk('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap · © OpenTopoMap (CC-BY-SA)',subdomains:'abc',maxZoom:17})],
+    ['OpenStreetMap (requer servidor http://)', mk('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'})],
+  ];
+  const bases={};BASES.forEach(([n,l])=>bases[n]=l);
+  let baseIdx=0;
+  BASES[0][1].addTo(m);
+  L.control.layers(bases,null,{position:'topright',collapsed:true}).addTo(m);
+  L.control.scale({imperial:false,position:'bottomleft'}).addTo(m);
+
+  // Status overlay + automatic fallback: if the current base map returns only errors
+  // (403 from OSM, offline, corporate proxy...), switch to the next provider in the list.
+  let okTiles=0,badTiles=0,switching=false;
+  const tryNextBase=(reason)=>{
+    if(switching)return;switching=true;
+    const cur=BASES[baseIdx];
+    let next=-1;
+    for(let i=1;i<BASES.length;i++){const j=(baseIdx+i)%BASES.length;if(j!==baseIdx&&!BASES[j][2]){next=j;break;}}
+    cur[2]=true; // mark as failed
+    if(next<0){
+      setMapStatus('Nenhum provedor de mapa base respondeu (sem internet ou bloqueio de rede). As camadas e os rasters continuam visíveis.',true);
+      switching=false;return;
+    }
+    lg(`Mapa base "${cur[0]}" indisponível (${reason}); trocando para "${BASES[next][0]}"`,'w');
+    try{m.removeLayer(cur[1]);}catch(e){}
+    baseIdx=next;okTiles=0;badTiles=0;
+    BASES[next][1].addTo(m);
+    setMapStatus('Carregando mapa base…');
+    switching=false;
+  };
+  BASES.forEach(([name,tl],i)=>{
+    tl.on('tileload',()=>{if(i!==baseIdx)return;okTiles++;setMapStatus(null);});
+    tl.on('tileerror',()=>{if(i!==baseIdx)return;badTiles++;if(!okTiles&&badTiles>=3)tryNextBase('erro nos tiles');});
+  });
+  m.on('baselayerchange',e=>{
+    const i=BASES.findIndex(b=>b[1]===e.layer);
+    if(i>=0){baseIdx=i;BASES[i][2]=false;}
+    okTiles=0;badTiles=0;setMapStatus('Carregando mapa base…');
+  });
+  setTimeout(()=>{if(!okTiles&&!badTiles)tryNextBase('sem resposta');},8000);
+
+  // Keep the map correctly sized: after layout, on container resize and on window resize
+  requestAnimationFrame(()=>m.invalidateSize());
+  setTimeout(()=>m.invalidateSize(),250);
+  if(window.ResizeObserver){
+    const ro=new ResizeObserver(()=>{m.invalidateSize();});
+    ro.observe(el.parentElement||el);
+  }
+  window.addEventListener('resize',()=>m.invalidateSize());
+
+  S.map=m;
+  S.mRasterLayers={};   // rasterId+featIdx → L.imageOverlay
+  S.shps.filter(s=>s.geojson).forEach(s=>addShpToMap(s));
+  updMapFilters();
+  // Initial state: labels ON (button highlighted)
+  const btn=document.getElementById('btn-labels');
+  if(btn){btn.style.background='var(--pri)';btn.style.color='#fff';}
+  lg('Mapa inicializado (Leaflet '+L.version+')','i');
+}
+
+function addShpToMap(shp){
+  if(!S.map||!shp.geojson)return;
+  if(S.mLayers[shp.id])S.map.removeLayer(S.mLayers[shp.id]);
+  const cols=['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#14b8a6'];
+  const col=cols[S.shps.indexOf(shp)%cols.length];
+  const gj={type:'FeatureCollection',features:shp.geojson.features.map(f=>{
+    try{return toWGS84(f,shp)}catch(e){return f}
+  })};
+  const layer=L.geoJSON(gj,{
+    style:()=>({color:col,weight:2.5,opacity:.9,fillOpacity:.08,fillColor:col}),
+    onEachFeature:(feat,lyr)=>{
+      lyr.on('click',()=>showFeatStats(feat,shp));
+      lyr.bindTooltip(String(shp.attr?feat.properties[shp.attr]:'Feature'),{permanent:false,direction:'top'});
+    }
+  });
+  if(S.map)layer.addTo(S.map);
+  S.mLayers[shp.id]=layer;
+  buildLabelLayer(shp);   // render centroid labels
+  updMapLayers();
+  try{S.map.fitBounds(layer.getBounds(),{padding:[20,20]})}catch(e){}
+}
+
+// ── Render a clipped raster result as a canvas ImageOverlay ──────────────
+async function renderRasterOnMap(result, rst, shp){
+  const key = result.rasterId+'-'+result.featureIndex;
+  // Remove old overlay if exists
+  if(S.mRasterLayers[key]){S.map.removeLayer(S.mRasterLayers[key]);delete S.mRasterLayers[key];}
+  if(!rst||!rst.img)return;
+
+  try{
+    const img=rst.img;
+    const bbox=img.getBoundingBox();
+    const [xmin,ymin,xmax,ymax]=bbox;
+    const w=img.getWidth(),h=img.getHeight();
+    const xr=(xmax-xmin)/w, yr=(ymax-ymin)/h;
+
+    // Find the feature's WGS84 geometry for clipping
+    const feat=shp.geojson.features[result.featureIndex];
+    if(!feat)return;
+    const clipGeom=getClipGeom(feat,shp,rst);
+    const featForBbox={type:'Feature',geometry:clipGeom,properties:{}};
+    const fb=getBBox(featForBbox);
+
+    // Pixel window
+    const c0=Math.max(0,Math.floor((fb[0]-xmin)/xr));
+    const r0=Math.max(0,Math.floor((ymax-fb[3])/yr));
+    const c1=Math.min(w,Math.ceil((fb[2]-xmin)/xr));
+    const r1=Math.min(h,Math.ceil((ymax-fb[1])/yr));
+    if(c0>=c1||r0>=r1)return;
+    const ww=c1-c0, wh=r1-r0;
+
+    const rd=await img.readRasters({window:[c0,r0,c1,r1]});
+    const band=rd[0];
+
+    // Canvas for mask
+    const cv=document.createElement('canvas');
+    cv.width=ww; cv.height=wh;
+    const ctx=cv.getContext('2d');
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,ww,wh);
+    ctx.fillStyle='#fff';
+    drawGeom(ctx,clipGeom,xmin,ymax,xr,yr,c0,r0);
+    const mask=ctx.getImageData(0,0,ww,wh).data;
+
+    // Canvas for color output
+    const out=document.createElement('canvas');
+    out.width=ww; out.height=wh;
+    const octx=out.getContext('2d');
+    const idata=octx.createImageData(ww,wh);
+    const pix=idata.data;
+    const noDataVal=rst.meta.noData;
+    const isND=(v)=>noDataVal!=null&&(v===noDataVal||Math.abs(v-noDataVal)<0.001);
+
+    // Build class→color map for this result
+    const classValues=[...new Set(result.classes.map(c=>c.value))];
+    const colorMap={};
+    classValues.forEach((v,i)=>{colorMap[v]=hexToRgb(clsColor(v));});
+
+    for(let i=0;i<ww*wh;i++){
+      if(mask[i*4]>128){
+        const v=band[i];
+        if(v!=null&&!isNaN(v)&&isFinite(v)&&!isND(v)){
+          const k=Math.round(Number(v));
+          const [r,g,b]=colorMap[k]||hexToRgb(clsColor(k));
+          pix[i*4]=r; pix[i*4+1]=g; pix[i*4+2]=b; pix[i*4+3]=200; // 78% opacity
+        }
+      }
+    }
+    octx.putImageData(idata,0,0);
+
+    // Map bounds for this window in WGS84
+    // bbox is in raster CRS; if raster is geographic, already WGS84
+    const lon_w = xmin + c0*xr;
+    const lon_e = xmin + c1*xr;
+    const lat_n = ymax - r0*yr;
+    const lat_s = ymax - r1*yr;
+    const leafletBounds = [[lat_s,lon_w],[lat_n,lon_e]];
+
+    const dataUrl=out.toDataURL('image/png');
+    const overlay=L.imageOverlay(dataUrl, leafletBounds, {opacity:0.85, interactive:false});
+    overlay.addTo(S.map);
+    S.mRasterLayers[key]=overlay;
+  } catch(e){console.error('renderRasterOnMap:',e);}
+}
+
+// ── Build and show legend for visible raster layers ────────────────────────
+function buildLegend(results){
+  const leg=document.getElementById('map-legend');
+  const body=document.getElementById('map-legend-body');
+  if(!leg||!body||!results.length){if(leg)leg.style.display='none';return;}
+  // Collect all classes across all rasters for this selection
+  const rasterMap={};
+  results.forEach(r=>{
+    if(!rasterMap[r.rasterName])rasterMap[r.rasterName]={name:r.rasterName,_rasterId:r.rasterId,classes:{}};
+    r.classes.forEach(c=>{rasterMap[r.rasterName].classes[c.value]=c;});
+  });
+  body.innerHTML=Object.values(rasterMap).map(rm=>`
+    <div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--t2);margin-bottom:4px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap">${rm.name}</div>
+      ${Object.values(rm.classes).sort((a,b)=>a.value-b.value).map(c=>`
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="width:14px;height:14px;border-radius:2px;background:${clsColor(c.value)};flex-shrink:0;border:1px solid rgba(0,0,0,.1)"></span>
+          <span style="font-size:11px;flex:1">${clsLabel(rm._rasterId,c.value)}</span>
+          <span style="font-size:10px;color:var(--t3)">${c.percentage.toFixed(1)}%</span>
+        </div>
+      `).join('')}
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;opacity:.55">
+        <span style="width:14px;height:14px;border-radius:2px;background:#e2e8f0;flex-shrink:0;border:1px dashed #94a3b8"></span>
+        <span style="font-size:11px">Sem dado / fora</span>
+      </div>
+    </div>
+  `).join('<div style="height:1px;background:var(--brd);margin:6px 0"></div>');
+  leg.style.display='block';
+}
+
+// ── Update raster layers panel in sidebar ─────────────────────────────────
+function updRasterLayersPanel(){
+  const el=document.getElementById('map-raster-layers');
+  if(!el)return;
+  if(!S.results.length){
+    el.innerHTML='<p style="font-size:12px;color:var(--t3)">Execute o processamento para visualizar rasters.</p>';
+    return;
+  }
+  // Group by raster
+  const rasters=[...new Set(S.results.map(r=>r.rasterId))];
+  el.innerHTML=rasters.map((rid,ri)=>{
+    const r=S.results.find(x=>x.rasterId===rid);
+    const rst=S.rsts.find(x=>x.id===rid);
+    return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--brd)">
+      <input type="checkbox" id="chk-rst-${rid}" checked
+        onchange="togRasterLayer('${rid}',this.checked)" style="cursor:pointer">
+      <span style="width:10px;height:10px;border-radius:2px;background:${CLS_COLORS[ri%CLS_COLORS.length]};flex-shrink:0"></span>
+      <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r?.rasterName||''}">
+        ${r?.rasterName||'Raster'}
+      </span>
+      <span class="badge bt" style="font-size:9px">RST</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Toggle raster overlays on/off ─────────────────────────────────────────
+function togRasterLayer(rasterId, vis){
+  Object.entries(S.mRasterLayers||{}).forEach(([key,layer])=>{
+    if(key.startsWith(rasterId+'-')){
+      if(vis)S.map?.addLayer(layer);
+      else S.map?.removeLayer(layer);
+    }
+  });
+}
+
+// ── Render ALL raster results onto the map ────────────────────────────────
+async function renderAllRastersOnMap(){
+  if(!S.map)return;
+  // Clear existing raster overlays
+  Object.values(S.mRasterLayers||{}).forEach(l=>{try{S.map.removeLayer(l);}catch(e){}});
+  S.mRasterLayers={};
+  for(const result of S.results){
+    const rst=S.rsts.find(r=>r.id===result.rasterId);
+    const shp=S.shps.find(s=>s.id===result.shapeId);
+    if(rst&&shp)await renderRasterOnMap(result,rst,shp);
+    await new Promise(r=>setTimeout(r,0));
+  }
+  updRasterLayersPanel();
+  buildLegend(S.results);
+}
+
+function clearRasterLayers(){
+  Object.values(S.mRasterLayers||{}).forEach(l=>{try{S.map?.removeLayer(l);}catch(e){}});
+  S.mRasterLayers={};
+  const el=document.getElementById('map-raster-layers');
+  if(el)el.innerHTML='<p style="font-size:12px;color:var(--t3)">Rasters limpos.</p>';
+  const leg=document.getElementById('map-legend');
+  if(leg)leg.style.display='none';
+}
+
+function updMapLayers(){
+  const el=document.getElementById('map-layers');if(!el)return;
+  const loaded=S.shps.filter(s=>s.geojson);
+  if(!loaded.length){el.innerHTML='<p style="font-size:12px;color:var(--t3)">Nenhuma camada carregada</p>';return}
+  const cols=['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#14b8a6'];
+  el.innerHTML=loaded.map((s,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--brd)">
+      <input type="checkbox" checked onchange="togLayer('${s.id}',this.checked)" style="cursor:pointer">
+      <span style="width:10px;height:10px;border-radius:2px;background:${cols[i%cols.length]};flex-shrink:0"></span>
+      <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.name}">${s.name}</span>
+      <span class="badge bb" style="font-size:9px">SHP</span>
+    </div>
+  `).join('');
+}
+
+function togLayer(id,vis){if(!S.map||!S.mLayers[id])return;if(vis)S.map.addLayer(S.mLayers[id]);else S.map.removeLayer(S.mLayers[id])}
+
+function fitBounds(){
+  if(!S.map)return;
+  const allLayers=[...Object.values(S.mLayers),...Object.values(S.mRasterLayers||{})];
+  const bs=allLayers.map(l=>{try{return l.getBounds?l.getBounds():null}catch(e){return null}}).filter(Boolean);
+  if(!bs.length)return;
+  const all=L.latLngBounds(bs.flatMap(b=>[b.getSouthWest(),b.getNorthEast()]));
+  S.map.fitBounds(all,{padding:[20,20]});
+}
+
+// ── Show stats for ALL rasters for clicked feature ────────────────────────
+function showFeatStats(feat,shp){
+  const av=shp.attr?feat.properties[shp.attr]:null;
+  const res=S.results.filter(r=>r.shapeId===shp.id&&r.attributeValue===String(av??''));
+  document.getElementById('map-info').style.display='block';
+  // Feature attributes
+  const fi=document.getElementById('map-feat');
+  fi.innerHTML=Object.entries(feat.properties||{}).slice(0,7).map(([k,v])=>
+    `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--brd)">
+      <span style="color:var(--t2)">${k}</span>
+      <strong>${String(v).slice(0,25)}</strong>
+    </div>`
+  ).join('');
+  // Stats panel — ALL rasters
+  const si=document.getElementById('map-stats');
+  if(!res.length){
+    si.innerHTML='<p style="color:var(--t3)">Sem estatísticas. Execute o processamento.</p>';
+    return;
+  }
+  si.innerHTML=res.map((r,ri)=>`
+    <div style="margin-bottom:14px;${ri>0?'padding-top:12px;border-top:2px solid var(--brd)':''}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-weight:700;font-size:13px;color:var(--pri)">${r.rasterName}</div>
+        <span class="badge bt" style="font-size:9px">RST ${ri+1}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:8px;font-size:11px">
+        <div style="background:var(--bg);padding:4px 8px;border-radius:5px">
+          <div style="color:var(--t3)">Área Geometria</div>
+          <div style="font-weight:700">${fmtN(r.geomAreaHa||r.totalAreaHa)} ha</div>
+        </div>
+        <div style="background:var(--bg);padding:4px 8px;border-radius:5px">
+          <div style="color:var(--t3)">Cobertura Raster</div>
+          <div style="font-weight:700">${(r.coveragePct||100).toFixed(1)}%</div>
+        </div>
+        <div style="background:var(--bg);padding:4px 8px;border-radius:5px">
+          <div style="color:var(--t3)">Moda</div>
+          <div style="font-weight:700;display:flex;align-items:center;gap:4px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${clsColor(r.mode)};display:inline-block"></span>
+            ${r.mode!=null?clsLabel(r.rasterId,r.mode):'—'}
+          </div>
+        </div>
+        <div style="background:var(--bg);padding:4px 8px;border-radius:5px">
+          <div style="color:var(--t3)">Nº Classes</div>
+          <div style="font-weight:700">${r.classes.length}</div>
+        </div>
+      </div>
+      ${r.classes.map(c=>`
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
+          <span style="width:10px;height:10px;border-radius:2px;background:${clsColor(c.value)};flex-shrink:0"></span>
+          <span style="font-size:11px;flex:1">${clsLabel(r.rasterId,c.value)}</span>
+          <span style="font-size:11px;color:var(--t2)">${fmtN(c.areaHa)} ha</span>
+          <span style="font-size:11px;font-weight:700;min-width:38px;text-align:right">${c.percentage.toFixed(1)}%</span>
+        </div>
+        <div style="height:3px;background:#e2e8f0;border-radius:2px;margin-bottom:4px">
+          <div style="height:100%;width:${Math.min(100,c.percentage)}%;background:${clsColor(c.value)};border-radius:2px"></div>
+        </div>
+      `).join('')}
+      ${(r.noDataPct||0)>0.05?`
+        <div style="display:flex;align-items:center;gap:5px;margin-top:2px;opacity:.6">
+          <span style="width:10px;height:10px;border-radius:2px;background:#cbd5e1;flex-shrink:0;border:1px dashed #94a3b8"></span>
+          <span style="font-size:11px;flex:1">Sem dado</span>
+          <span style="font-size:11px;font-weight:700">${(r.noDataPct||0).toFixed(1)}%</span>
+        </div>`:''}
+    </div>
+  `).join('');
+  // Also update legend for this feature
+  buildLegend(res);
+}
+
+function filterMap(){
+  const id=document.getElementById('map-fshp')?.value;
+  Object.entries(S.mLayers).forEach(([k,l])=>{if(!id||k===id)S.map?.addLayer(l);else S.map?.removeLayer(l)});
+}
+function updMapFilters(){
+  const sel=document.getElementById('map-fshp');if(!sel)return;
+  sel.innerHTML='<option value="">Todos os Shapes</option>'+S.shps.filter(s=>s.geojson).map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+// ========= STORAGE & UI =========
+function updStorage(){
+  const total=S.sizeShp+S.sizeRst,maxGB=5*1073741824;
+  const gb=(total/1073741824).toFixed(2);
+  document.getElementById('sto-val').textContent=gb;
+  document.getElementById('sto-bar').style.width=Math.min(100,total/maxGB*100)+'%';
+  document.getElementById('sto-shp').textContent=fmtS(S.sizeShp);
+  document.getElementById('sto-rst').textContent=fmtS(S.sizeRst);
+}
+function updPrev(shp){
+  document.getElementById('prev-name').textContent=shp.name;
+  document.getElementById('prev-sub').textContent=`${shp.geojson?.features?.length||0} features · ${fmtS(shp.size)}`;
+}
+</script>
+</body>
+</html>
